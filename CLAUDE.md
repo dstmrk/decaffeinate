@@ -14,7 +14,8 @@ every text that describes the project (README, Info.plist, the header of
 **Stack:** a single `main.swift` (Cocoa, IOKit, ServiceManagement),
 compiled with `swiftc` by `build.sh` into a universal app (arm64 +
 x86_64), macOS 13+, ad-hoc signed. No Xcode project, no SwiftPM, no
-external dependencies, no network requests.
+external dependencies, no network requests except the opt-in update
+check (this repo's latest GitHub release, never upstream's).
 
 **Map:**
 

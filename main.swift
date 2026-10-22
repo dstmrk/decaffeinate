@@ -152,6 +152,53 @@ func statLine(_ label: String, sum: Double, n: Int, capacityWh: Double) -> Strin
     return String(format: "%@: %.1f W%@", label, w, hours)
 }
 
+// Update check: this fork's latest GitHub release, compared with this build's version. Off unless
+// the user turns on the daily check or picks "Check for updates…".
+let releasesAPI = URL(string: "https://api.github.com/repos/dstmrk/decaffeinate/releases/latest")!
+let releasesPage = URL(string: "https://github.com/dstmrk/decaffeinate/releases/latest")!
+let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
+
+// "v1.2.0" → [1, 2, 0]. nil for anything else, a pre-release suffix included, so it's never offered as an update.
+func versionParts(_ v: String) -> [Int]? {
+    let parts = (v.hasPrefix("v") ? v.dropFirst() : Substring(v)).split(separator: ".", omittingEmptySubsequences: false)
+    guard parts.allSatisfy({ p in !p.isEmpty && p.allSatisfy { $0.isASCII && $0.isNumber } }) else { return nil }
+    let n = parts.compactMap { Int($0) } // drops a component too large for Int
+    return n.count == parts.count ? n : nil
+}
+
+// The release's version as shown in the menu ("v1.2.0" → "1.2.0") when it's newer than this build, else nil.
+// Missing components count as 0: "1.2" and "1.2.0" are the same version.
+func newerVersion(_ tag: String, than current: String) -> String? {
+    guard var a = versionParts(tag), var b = versionParts(current) else { return nil }
+    let n = max(a.count, b.count)
+    a += Array(repeating: 0, count: n - a.count)
+    b += Array(repeating: 0, count: n - b.count)
+    return b.lexicographicallyPrecedes(a) ? String(tag.drop { $0 == "v" }) : nil
+}
+
+// tag_name from the releases/latest JSON; nil for an error body or anything unexpected.
+func latestTag(_ data: Data) -> String? {
+    (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["tag_name"] as? String
+}
+
+// A day after the last successful check, or at once if the clock was set back past it.
+func updateCheckDue(last: Date?, now: Date = Date()) -> Bool {
+    guard let last else { return true }
+    let elapsed = now.timeIntervalSince(last)
+    return elapsed >= 24 * 60 * 60 || elapsed < 0
+}
+
+// One anonymous request to GitHub's public API; nothing about the Mac is sent. nil on any failure.
+func fetchLatestTag(_ done: @escaping (String?) -> Void) {
+    var req = URLRequest(url: releasesAPI, timeoutInterval: 15)
+    req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+    req.setValue("Decaffeinate/\(appVersion)", forHTTPHeaderField: "User-Agent")
+    URLSession.shared.dataTask(with: req) { data, resp, _ in
+        let tag = (resp as? HTTPURLResponse)?.statusCode == 200 ? data.flatMap(latestTag) : nil
+        DispatchQueue.main.async { done(tag) }
+    }.resume()
+}
+
 // Menu bar template glyphs: Lucide "coffee" (ISC, see LICENSE) on its 24-unit grid, drawn at 18 pt so the
 // 2-unit stroke lands at 1.5 pt. Filled steaming cup = on, empty outline cup = off.
 // macOS tints templates for light and dark menu bars.
@@ -181,6 +228,11 @@ class App: NSObject, NSApplicationDelegate {
     let lockedItem = NSMenuItem(title: "Keep awake when screen locked", action: #selector(flipLocked), keyEquivalent: "")
     let loginItem = NSMenuItem(title: "Launch at login", action: #selector(flipLogin), keyEquivalent: "")
     let watchdogItem = NSMenuItem(title: "Crash protection is off, fix…", action: #selector(openLoginItems), keyEquivalent: "")
+    let updateItem = NSMenuItem(title: "", action: #selector(openReleases), keyEquivalent: "")
+    let dailyUpdatesItem = NSMenuItem(title: "Check for updates daily", action: #selector(flipDailyUpdates), keyEquivalent: "")
+    let checkUpdatesItem = NSMenuItem(title: "Check for updates…", action: #selector(checkUpdatesNow), keyEquivalent: "")
+    var dailyUpdates: Bool { UserDefaults.standard.bool(forKey: "dailyUpdates") } // opt-in: off means no network requests
+    var latestVersion: String? // set when a check found a newer release
     var lowPower: Bool { UserDefaults.standard.object(forKey: "lowPower") as? Bool ?? true }
     var enabled = UserDefaults.standard.object(forKey: "enabled") as? Bool ?? true
     var sessionActive = true
@@ -209,7 +261,8 @@ class App: NSObject, NSApplicationDelegate {
             cutoffs.addItem(i)
         }
         cutoffItem.submenu = cutoffs
-        [watchdogItem, toggle, lowPowerItem, lockedItem, loginItem, cutoffItem].forEach { $0.target = self; menu.addItem($0) }
+        updateItem.image = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil)
+        [watchdogItem, updateItem, toggle, lowPowerItem, lockedItem, loginItem, dailyUpdatesItem, cutoffItem].forEach { $0.target = self; menu.addItem($0) }
         menu.addItem(.separator())
         let header = NSMenuItem(title: "Average power on battery", action: nil, keyEquivalent: "")
         header.isEnabled = false
@@ -218,8 +271,7 @@ class App: NSObject, NSApplicationDelegate {
         menu.addItem(resetStats)
         menu.addItem(.separator())
         uninstallItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
-        uninstallItem.target = self
-        menu.addItem(uninstallItem)
+        [checkUpdatesItem, uninstallItem].forEach { $0.target = self; menu.addItem($0) }
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApp.terminate), keyEquivalent: "q"))
         item.menu = menu
 
@@ -249,6 +301,10 @@ class App: NSObject, NSApplicationDelegate {
         // Polls the lid every 2 seconds. An IOKit interest notification would react faster, but polling is simpler and cheap.
         // The tolerance lets macOS coalesce this wakeup with other timers instead of waking the CPU on its own.
         Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.tick() }.tolerance = 0.5
+        // Hourly, so a day that passes during sleep or a failed check is caught up within the hour.
+        // The first one waits a little: at login the network is often not up yet.
+        Timer.scheduledTimer(withTimeInterval: 60 * 60, repeats: true) { [weak self] _ in self?.checkDaily() }.tolerance = 10 * 60
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in self?.checkDaily() }
         apply()
         warnIfWatchdogOff()
     }
@@ -377,7 +433,59 @@ class App: NSObject, NSApplicationDelegate {
         cutoffItem.submenu?.items.forEach { $0.state = $0.tag == minBatteryPercent ? .on : .off }
         watchdogItem.isHidden = !watchdogNeedsAttention(hasLid: hasLid, status: watchdog.status)
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        dailyUpdatesItem.state = dailyUpdates ? .on : .off
+        updateItem.isHidden = latestVersion == nil
+        updateItem.title = "Download Decaffeinate \(latestVersion ?? "")"
         refreshStats()
+    }
+
+    func checkDaily() {
+        if dailyUpdates && updateCheckDue(last: UserDefaults.standard.object(forKey: "lastUpdateCheck") as? Date) {
+            checkForUpdate(manual: false)
+        }
+    }
+
+    // Only a successful check counts as the day's check. The daily one stays quiet: a newer release
+    // shows up as the Download item at the top of the menu. A manual one answers with an alert either way.
+    func checkForUpdate(manual: Bool) {
+        fetchLatestTag { [weak self] tag in
+            guard let self else { return }
+            if let tag {
+                UserDefaults.standard.set(Date(), forKey: "lastUpdateCheck")
+                self.latestVersion = newerVersion(tag, than: appVersion)
+                self.refreshUI()
+            }
+            if manual { self.showUpdateResult(found: tag != nil) }
+        }
+    }
+
+    func showUpdateResult(found: Bool) {
+        let alert = NSAlert()
+        let offered = found ? latestVersion : nil // a check finishing while the alert is up can't change what Download means
+        if !found {
+            alert.messageText = "Couldn't check for updates"
+            alert.informativeText = "GitHub didn't return a release. Check your connection and try again later."
+        } else if let v = offered {
+            alert.messageText = "Decaffeinate \(v) is available"
+            alert.informativeText = "You have \(appVersion). The download page opens in your browser."
+            alert.addButton(withTitle: "Download")
+            alert.addButton(withTitle: "Later")
+        } else {
+            alert.messageText = "Decaffeinate is up to date"
+            alert.informativeText = "\(appVersion) is the latest version."
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn && offered != nil { openReleases() }
+    }
+
+    @objc func checkUpdatesNow() { checkForUpdate(manual: true) }
+
+    @objc func openReleases() { NSWorkspace.shared.open(releasesPage) }
+
+    @objc func flipDailyUpdates() {
+        UserDefaults.standard.set(!dailyUpdates, forKey: "dailyUpdates")
+        checkDaily()
+        refreshUI()
     }
 
     @objc func flipLowPower() {
@@ -527,6 +635,24 @@ if CommandLine.arguments.contains("--selftest") {
     precondition(watchdogNeedsAttention(hasLid: true, status: .notRegistered))
     precondition(watchdogNeedsAttention(hasLid: true, status: .notFound))
     precondition(!watchdogNeedsAttention(hasLid: false, status: .notRegistered)) // no lid, never registered
+    // Update check: only plain dotted numbers count as versions, so a pre-release tag is never offered.
+    precondition(versionParts("v1.2.0") == [1, 2, 0] && versionParts("1.10") == [1, 10])
+    precondition(versionParts("v1.3.0-rc1") == nil && versionParts("") == nil && versionParts("v") == nil)
+    precondition(versionParts("1..2") == nil && versionParts("1.+2") == nil && versionParts("1.99999999999999999999") == nil)
+    precondition(newerVersion("v1.2.0", than: "1.1.9") == "1.2.0" && newerVersion("v1.10.0", than: "1.9.0") == "1.10.0")
+    precondition(newerVersion("v2", than: "1.9.9") == "2" && newerVersion("1.2.0", than: "1.1") == "1.2.0")
+    precondition(newerVersion("v1.2.0", than: "1.2.0") == nil && newerVersion("v1.2", than: "1.2.0") == nil && newerVersion("v1.2.0", than: "1.2") == nil)
+    precondition(newerVersion("v1.1.0", than: "1.2.0") == nil)
+    precondition(newerVersion("v0.1.0", than: "0.0.0") == "0.1.0") // built from source without tags
+    precondition(newerVersion("v1.3.0-rc1", than: "1.2.0") == nil && newerVersion("v1.3.0", than: "unknown") == nil)
+    precondition(latestTag(Data(#"{"tag_name": "v1.2.0", "name": "Decaffeinate 1.2.0"}"#.utf8)) == "v1.2.0")
+    precondition(latestTag(Data(#"{"message": "Not Found"}"#.utf8)) == nil && latestTag(Data(#"{"tag_name": 12}"#.utf8)) == nil)
+    precondition(latestTag(Data("<html>".utf8)) == nil && latestTag(Data("[1]".utf8)) == nil)
+    let day = 24 * 60 * 60.0, t0 = Date(timeIntervalSince1970: 1_000_000)
+    precondition(updateCheckDue(last: nil, now: t0)) // never checked
+    precondition(!updateCheckDue(last: t0, now: t0 + day - 1) && updateCheckDue(last: t0, now: t0 + day))
+    precondition(updateCheckDue(last: t0, now: t0 - 1)) // clock set back past the last check
+    precondition(releasesAPI.absoluteString == "https://api.github.com/repos/dstmrk/decaffeinate/releases/latest") // this fork, not upstream
     precondition(Set(glyphs.keys) == ["active", "disabled"])
     precondition(run("/bin/echo", ["hi"]) == "hi\n")
     precondition(run("/bin/sh", ["-c", "head -c 200000 /dev/zero"]).utf8.count == 200_000) // more than a pipe buffer
