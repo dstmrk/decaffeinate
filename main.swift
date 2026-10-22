@@ -25,8 +25,11 @@ func run(_ path: String, _ args: [String]) -> String {
     p.executableURL = URL(fileURLWithPath: path)
     p.arguments = args
     p.standardOutput = pipe; p.standardError = pipe
-    try? p.run(); p.waitUntilExit()
-    return String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+    guard (try? p.run()) != nil else { return "" }
+    // Drain before waiting: a child that fills the pipe buffer (64 KB) blocks until someone reads it.
+    let out = pipe.fileHandleForReading.readDataToEndOfFile()
+    p.waitUntilExit()
+    return String(decoding: out, as: UTF8.self)
 }
 
 // Only the exact commands whitelisted in sudoers; -n never prompts.
@@ -202,7 +205,8 @@ class App: NSObject, NSApplicationDelegate {
         restorePowerMode() // in case a previous run quit or crashed with the lid closed
         if helperOK { try? watchdog.register() }
         // Polls the lid every 2 seconds. An IOKit interest notification would react faster, but polling is simpler and cheap.
-        Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.tick() }
+        // The tolerance lets macOS coalesce this wakeup with other timers instead of waking the CPU on its own.
+        Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.tick() }.tolerance = 0.5
         apply()
     }
 
@@ -402,6 +406,9 @@ if CommandLine.arguments.contains("--selftest") {
     precondition(batteryDraw(["ExternalConnected": true, "Voltage": 12000, "InstantAmperage": 2000, "AppleRawMaxCapacity": 8000]) == nil)
     precondition(pmsetCmds.contains("-b lowpowermode 1") && pmsetCmds.contains("-c powermode 2"))
     precondition(Set(glyphs.keys) == ["active", "disabled", "setup"])
+    precondition(run("/bin/echo", ["hi"]) == "hi\n")
+    precondition(run("/bin/sh", ["-c", "head -c 200000 /dev/zero"]).utf8.count == 200_000) // more than a pipe buffer
+    precondition(run("/nonexistent", []) == "")
     print("Self-test passed.")
     print("This Mac: lid \(hasLid ? "yes" : "no"), external display \(externalDisplayActive() ? "yes" : "no"), power setting \(powerModeSettings()?.key ?? "none"), " +
           "battery \(batteryPercent().map { "\($0)%" } ?? "on AC"), draw \(batteryDraw().map { String(format: "%.1f W", $0.watts) } ?? "n/a on AC")")
