@@ -1,0 +1,39 @@
+# Builds the universal app and runs its self-test on every pull request and on
+# main. It's the only check that compiles main.swift: cloud sessions run on
+# Linux, where AppKit isn't available.
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build universal app
+        run: ./build.sh
+      - name: Check both architectures
+        run: lipo "$HOME/Applications/Decaffeinate.app/Contents/MacOS/Decaffeinate" -verify_arch arm64 x86_64
+      - name: Self-test
+        run: '"$HOME/Applications/Decaffeinate.app/Contents/MacOS/Decaffeinate" --selftest'
+      - name: Lint watchdog plist
+        run: plutil -lint io.github.dstmrk.decaffeinate.watchdog.plist
+
+  hook-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run hook test suites
+        run: |
+          bash .claude/hooks/test-block-push-to-main.sh
+          bash .claude/hooks/test-block-commit-on-main.sh
+      - name: ShellCheck
+        run: shellcheck build.sh measure.sh .claude/hooks/*.sh
