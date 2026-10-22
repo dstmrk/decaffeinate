@@ -1,19 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<!-- Cup and steam: Lucide "coffee" (ISC, see LICENSE), the cup filled, on its 24-unit grid scaled 25x. -->
 <defs>
-<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B2942"/><stop offset="1" stop-color="#0A1120"/></linearGradient>
-<radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FF7A2E" stop-opacity="0.38"/><stop offset="1" stop-color="#FF7A2E" stop-opacity="0"/></radialGradient>
-<linearGradient id="steam" gradientUnits="userSpaceOnUse" x1="0" y1="440" x2="0" y2="230"><stop offset="0" stop-color="#F2541B"/><stop offset="0.55" stop-color="#FFB547" stop-opacity="0.85"/><stop offset="1" stop-color="#FFF0C4" stop-opacity="0.15"/></linearGradient>
-<linearGradient id="cup" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D4CEC5"/></linearGradient>
-<radialGradient id="coffee" cx="0.5" cy="0.4" r="0.6"><stop offset="0" stop-color="#8A5530"/><stop offset="1" stop-color="#4A2A17"/></radialGradient>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E9EEED"/></linearGradient>
 </defs>
 <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
-<rect x="100.5" y="100.5" width="823" height="823" rx="184.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.08"/>
-<circle cx="512" cy="500" r="300" fill="url(#glow)"/>
-<path d="M410 430 C380 390 440 360 410 310 C392 280 420 262 410 245 M480 430 C450 385 510 350 480 290 C462 255 492 238 480 220 M550 430 C520 390 580 360 550 310 C532 280 560 262 550 245" fill="none" stroke="url(#steam)" stroke-width="26" stroke-linecap="round"/>
-<ellipse cx="480" cy="726" rx="210" ry="28" fill="#6E7C93"/>
-<ellipse cx="480" cy="712" rx="236" ry="34" fill="#C9D2E0"/>
-<path d="M620 525 C705 512 728 565 716 605 C705 645 655 660 605 650" fill="none" stroke="#D9D3CA" stroke-width="36" stroke-linecap="round"/>
-<path d="M330 470 H630 L618 625 C612 672 572 704 520 704 H440 C388 704 348 672 342 625 Z" fill="url(#cup)"/>
-<ellipse cx="480" cy="470" rx="150" ry="30" fill="#F4F1EC"/>
-<ellipse cx="480" cy="474" rx="132" ry="21" fill="url(#coffee)"/>
+<rect x="100.5" y="100.5" width="823" height="823" rx="184.5" fill="none" stroke="#000000" stroke-opacity="0.08"/>
+<g transform="translate(212 224) scale(25)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M4 8h12a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z" fill="#14B8A6"/>
+<path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1" stroke="#0F766E"/>
+<path d="M6 2v2M10 2v2M14 2v2" stroke="#111111"/>
+</g>
 </svg>

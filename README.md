@@ -58,4 +58,4 @@ Choose **Uninstall…** from the menu. Decaffeinate turns lid-close sleep back o
 
 ## Credits and license
 
-MIT. Original work © 2026 sudolabs ([Pilot Light](https://github.com/CyrisXD/pilot-light)); see [LICENSE](LICENSE). If the app is useful to you, consider [sponsoring the original author](https://github.com/sponsors/CyrisXD).
+MIT. Original work © 2026 sudolabs ([Pilot Light](https://github.com/CyrisXD/pilot-light)); see [LICENSE](LICENSE). The cup icon is [Lucide](https://lucide.dev)'s "coffee" (ISC). If the app is useful to you, consider [sponsoring the original author](https://github.com/sponsors/CyrisXD).
