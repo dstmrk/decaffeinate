@@ -13,7 +13,7 @@ swiftc -O -target x86_64-apple-macos$MIN main.swift -o "$TMP/x86_64"
 lipo -create "$TMP/arm64" "$TMP/x86_64" -output "$APP/Contents/MacOS/Decaffeinate"
 rm -rf "$TMP"
 mkdir -p "$APP/Contents/Resources"
-cp assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns" # regenerate: swift assets/render-icon.swift
+swift assets/render-icon.swift "$APP/Contents/Resources/AppIcon.icns"
 mkdir -p "$APP/Contents/Library/LaunchAgents"
 cp io.github.dstmrk.decaffeinate.watchdog.plist "$APP/Contents/Library/LaunchAgents/"
 cat > "$APP/Contents/Info.plist" <<EOF
