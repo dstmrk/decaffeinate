@@ -60,9 +60,9 @@ func sudoersRule(user: String) -> String {
     "\(user) ALL=(root) NOPASSWD: " + pmsetCmds.map { "/usr/bin/pmset \($0)" }.joined(separator: ", ") + "\n"
 }
 
-// Shell script run as root by installHelper. The temp file is created by root in /tmp (sticky, root-owned; not $TMPDIR, which
-// could point into a user-owned directory) with mode 0600, so nothing the user can write sits between the check and the install. No quotes or backslashes, so it embeds
-// in an AppleScript string as is.
+// Shell script run as root by installHelper. Root makes the temp file in /tmp (sticky, root-owned, mode 0600;
+// not $TMPDIR, which could point into a user-owned directory), so nothing the user can write sits between the
+// visudo check and the install. No quotes or backslashes, so it embeds in an AppleScript string as is.
 func installScript(rule: String, path: String) -> String {
     "t=$(/usr/bin/mktemp /tmp/decaffeinate.XXXXXX) && /bin/echo '\(rule.trimmingCharacters(in: .newlines))' > $t && " +
         "/usr/sbin/visudo -cf $t && /usr/bin/install -m 0440 -o root -g wheel $t \(path); s=$?; /bin/rm -f $t; exit $s"
