@@ -153,6 +153,7 @@ class App: NSObject, NSApplicationDelegate {
     var deskMode = false // lid closed with an external display in use
     let openStat = NSMenuItem(), closedStat = NSMenuItem()
     let resetStats = NSMenuItem(title: "Reset power averages", action: #selector(reset), keyEquivalent: "")
+    var installing = false
     var lastChange = Date(), lastSample = Date.distantPast
     var capacityWh = 0.0
 
@@ -161,10 +162,7 @@ class App: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ n: Notification) {
         // Without the sudoers rule every pmset call fails silently, so on a Mac with a lid there's nothing to run.
-        if hasLid && !FileManager.default.fileExists(atPath: sudoersPath) && !installHelper() {
-            NSApp.terminate(nil)
-            return
-        }
+        if !ensureHelper() { return }
         let menu = NSMenu()
         let cutoffs = NSMenu()
         for pct in [0, 10, 15, 20] {
@@ -216,7 +214,18 @@ class App: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ n: Notification) { restore() }
 
+    // The rule can disappear while the app runs (someone follows the README's manual removal), which makes
+    // every pmset call fail silently. One stat per state change; apply() runs when someone is at the screen.
+    // Declining quits the app. Returns false when it did.
+    func ensureHelper() -> Bool {
+        if !hasLid || FileManager.default.fileExists(atPath: sudoersPath) { return true }
+        if installHelper() { return true }
+        NSApp.terminate(nil)
+        return false
+    }
+
     func apply() {
+        if installing || !ensureHelper() { return }
         bailed = false
         // disablesleep has to be set before the lid closes (lid close sleeps instantly),
         // so while armed it also stops idle sleep with the lid open. Display sleep is unaffected.
@@ -347,6 +356,9 @@ class App: NSObject, NSApplicationDelegate {
 
     // Explains the rule before the admin prompt. False if declined or the install failed.
     func installHelper() -> Bool {
+        // runModal spins the run loop, so lock/session notifications can re-enter apply() while the alert is up.
+        installing = true
+        defer { installing = false }
         let alert = NSAlert()
         alert.messageText = "Decaffeinate needs a one-time admin permission"
         alert.informativeText = "It adds a sudoers rule that lets Decaffeinate run only the pmset sleep and Low Power commands, " +
