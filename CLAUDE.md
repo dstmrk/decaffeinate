@@ -19,12 +19,14 @@ external dependencies, no network requests.
 **Map:**
 
 - `main.swift` — the whole app; the `--selftest` block is at the end
-- `build.sh` — build + `Info.plist` (version in `VERSION`)
+- `build.sh` — build + `Info.plist` (version from the `VERSION` env var;
+  a release tag sets it)
 - `io.github.dstmrk.decaffeinate.watchdog.plist` — LaunchAgent that
   turns lid-close sleep back on if the app isn't running
 - `measure.sh` — measures power draw from battery telemetry (`logs/`)
 - `assets/` — icon (SVG source + `render-icon.swift` → `.icns`)
-- `.github/workflows/ci.yml` — macOS build + selftest, hook tests
+- `.github/workflows/ci.yml` — macOS build + selftest, hook tests; on a
+  `v*` tag, also the `.dmg` and the GitHub Release
 - `.claude/` — hooks and skills for working with Claude
 
 ## Guiding principles
