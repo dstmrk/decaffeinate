@@ -96,7 +96,7 @@ assert_block "git push --mirror origin"
 assert_block "git push origin --mirror"
 assert_block "git -C /repo push --all origin"
 
-# `--all` su un comando che non e' un push non c'entra nulla.
+# `--all` on a command that isn't a push is fine.
 assert_pass "git fetch --all"
 assert_pass "git log --all --oneline"
 assert_pass "git branch --all"
