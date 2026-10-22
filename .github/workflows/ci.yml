@@ -1,6 +1,8 @@
 # Builds the universal app and runs its self-test on every pull request and on
 # main. It's the only check that compiles Sources/: cloud sessions run on
 # Linux, where AppKit isn't available.
+# Pull requests and pushes to main run only the jobs their files can affect
+# (the changes job decides); a tag runs all of them.
 # A v* tag runs the same checks, then attaches Decaffeinate-1.0.0.dmg to the
 # GitHub Release v1.0.0. The tag can come from git (git tag v1.0.0 && git push
 # origin v1.0.0), which creates the release, or from a release published on
@@ -17,9 +19,38 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  # A skipped job reports as passed, so it still satisfies a required check.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.diff.outputs.app }}
+      hooks: ${{ steps.diff.outputs.hooks }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: diff
+        timeout-minutes: 2
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # A tag, or a base git can't diff against, counts as a change to this
+          # file, which runs every job.
+          if [[ $GITHUB_REF == refs/tags/v* ]] || ! files=$(git diff --name-only "$BASE" HEAD); then
+            files=.github/workflows/ci.yml
+          fi
+          echo "$files"
+          # The app is built unless every file is one it never reads.
+          if grep -qvE '\.md$|^LICENSE$|^\.gitignore$|^\.claude/|^measure\.sh$' <<< "$files"; then app=true; else app=false; fi
+          if grep -qE '^\.claude/hooks/|\.sh$|^\.github/workflows/ci\.yml$' <<< "$files"; then hooks=true; else hooks=false; fi
+          echo "app=$app" >> "$GITHUB_OUTPUT"
+          echo "hooks=$hooks" >> "$GITHUB_OUTPUT"
+
   # Timeouts sit on steps, not jobs: a job timeout also counts the wait for a
   # macOS runner, and a long queue cancelled builds before they started.
   build:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -51,6 +82,8 @@ jobs:
           if-no-files-found: error
 
   hook-tests:
+    needs: changes
+    if: needs.changes.outputs.hooks == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
