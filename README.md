@@ -2,7 +2,7 @@
 
 A tiny macOS menu bar app that keeps a MacBook awake with the lid closed, so long-running jobs (AI coding agents, builds) keep working on a fraction of the power.
 
-Decaffeinate is a fork of [Pilot Light](https://github.com/CyrisXD/pilot-light) by [sudolabs](https://pilotlight.sudolabs.nz). The design, the measurements below and nearly all of the code are theirs. This fork drops the website, the update check and the support links, and builds from source only.
+Decaffeinate is a fork of [Pilot Light](https://github.com/CyrisXD/pilot-light) by [sudolabs](https://pilotlight.sudolabs.nz). The design, the measurements below and nearly all of the code are theirs. This fork drops the website, the update check and the support links.
 
 ## What it does
 
@@ -26,7 +26,11 @@ It makes no network requests.
 
 ¹ Pilot Light's figures: MacBook Pro with M5 Max (macOS 26.6), on battery. With Claude Code building and testing a website, lid closed: 2.3 W. Heavy local builds draw more, and battery hours are estimates.
 
-## Build and install
+## Install
+
+Download `Decaffeinate-<version>.dmg` from the [latest release](https://github.com/dstmrk/decaffeinate/releases/latest) and drag the app to Applications. It is ad-hoc signed, not notarized: the first time you open it, go to **System Settings › Privacy & Security** and click **Open Anyway**.
+
+## Build from source
 
 ```bash
 git clone https://github.com/dstmrk/decaffeinate
@@ -36,6 +40,8 @@ open ~/Applications/Decaffeinate.app
 ```
 
 Needs the Xcode command line tools. Builds a universal app (Apple silicon and Intel) for macOS 13 and later, ad-hoc signed. The whole app is [`main.swift`](main.swift).
+
+## First launch
 
 1. On first launch, click **Install…**. This one admin prompt adds a sudoers rule that allows only `pmset` sleep and Low Power changes. Decaffeinate can't work without it, so declining quits the app.
 2. Close the lid.
@@ -53,6 +59,7 @@ Choose **Uninstall…** from the menu. Decaffeinate turns lid-close sleep back o
 ## Development
 
 - `Decaffeinate --selftest` (the binary inside the app bundle) checks the core logic; CI runs it on a macOS runner with the universal build on every pull request.
+- Releases: `git tag v1.0.0 && git push origin v1.0.0`. CI runs the same checks as on a pull request, then publishes `Decaffeinate-1.0.0.dmg` as a GitHub Release.
 - `./measure.sh closed-batt 10` logs whole-Mac power from battery telemetry, to reproduce the numbers above.
 - The app icon is `assets/AppIcon.svg`; `build.sh` renders it into the bundle's `.icns` on every build.
 
