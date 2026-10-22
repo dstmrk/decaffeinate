@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds Decaffeinate.app into ~/Applications. Re-run after editing main.swift.
+# Builds Decaffeinate.app into ~/Applications. Re-run after editing Sources/.
 set -e
 cd "$(dirname "$0")"
 APP="$HOME/Applications/Decaffeinate.app"
@@ -10,8 +10,9 @@ MIN=13.0
 VERSION=${VERSION:-$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')}
 VERSION=${VERSION:-0.0.0}
 TMP=$(mktemp -d)
-swiftc -O -target arm64-apple-macos$MIN main.swift -o "$TMP/arm64"
-swiftc -O -target x86_64-apple-macos$MIN main.swift -o "$TMP/x86_64"
+# Every file in Sources/ is one module; main.swift holds the top-level code.
+swiftc -O -target arm64-apple-macos$MIN Sources/*.swift -o "$TMP/arm64"
+swiftc -O -target x86_64-apple-macos$MIN Sources/*.swift -o "$TMP/x86_64"
 lipo -create "$TMP/arm64" "$TMP/x86_64" -output "$APP/Contents/MacOS/Decaffeinate"
 rm -rf "$TMP"
 mkdir -p "$APP/Contents/Resources"

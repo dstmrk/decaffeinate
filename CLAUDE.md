@@ -9,17 +9,26 @@ everything back when the lid opens.
 It is a **fork of [Pilot Light](https://github.com/CyrisXD/pilot-light)
 by sudolabs** (MIT). The design and nearly all of the code are theirs:
 every text that describes the project (README, Info.plist, the header of
-`main.swift`) says so, and `LICENSE` keeps their copyright. That stays.
+`Sources/main.swift`) says so, and `LICENSE` keeps their copyright. That stays.
 
-**Stack:** a single `main.swift` (Cocoa, IOKit, ServiceManagement),
-compiled with `swiftc` by `build.sh` into a universal app (arm64 +
+**Stack:** Swift in `Sources/` (Cocoa, IOKit, ServiceManagement),
+all files compiled as one module with `swiftc` by `build.sh` into a universal app (arm64 +
 x86_64), macOS 13+, ad-hoc signed. No Xcode project, no SwiftPM, no
 external dependencies, no network requests except the opt-in update
 check (this repo's latest GitHub release, never upstream's).
 
 **Map:**
 
-- `main.swift` — the whole app; the `--selftest` block is at the end
+- `Sources/` — the app, one file per domain:
+  - `main.swift` — the credits header, `--selftest` dispatch, app start
+  - `Power.swift` — `pmset`, lid, displays, Low Power Mode, battery,
+    safety cutoffs, `restore()`
+  - `Helper.swift` — sudoers rule and its install script, `pmsetCmds`,
+    the watchdog
+  - `Updates.swift` — the opt-in update check
+  - `App.swift` — menu bar glyphs and the `App` delegate (menu, lid
+    state machine, alerts)
+  - `Selftest.swift` — every `precondition`, run by `--selftest`
 - `build.sh` — build + `Info.plist` (version from the `VERSION` env var, else
   the latest git tag, else `0.0.0`; CI sets it from a release tag)
 - `io.github.dstmrk.decaffeinate.watchdog.plist` — LaunchAgent that
@@ -44,7 +53,7 @@ check (this repo's latest GitHub release, never upstream's).
   config. But architectural choices are made for the long run: never a
   stopgap meant to be redone later.
 - **Light on resources.** ~0% CPU while waiting, ~25 MB of memory, one
-  file. Apple frameworks only: before writing a helper, check what
+  binary. Apple frameworks only: before writing a helper, check what
   Foundation/AppKit/IOKit already provide (never assume they can't do X).
 - **Least privilege.** The sudoers rule grants only the exact commands
   in `pmsetCmds`. If `pmsetCmds` changes, **rename `sudoersPath`** so
@@ -59,7 +68,7 @@ check (this repo's latest GitHub release, never upstream's).
   `.claude/hooks/block-push-to-main.sh`). Always a PR; merging is the
   user's call unless explicitly asked.
 - **2 · Tests first.** Every function with pure logic has its
-  `precondition`s in the `--selftest` block of `main.swift`, written
+  `precondition`s in `Sources/Selftest.swift`, written
   before the implementation. Logic is extracted into pure functions
   (input → output, like `bailReason`, `powerModeSettings(_:)`,
   `batteryDraw(_:)`) precisely so it can be tested there; I/O stays in a
@@ -99,11 +108,16 @@ check (this repo's latest GitHub release, never upstream's).
 
 ## Verification
 
-Cloud sessions run on **Linux, where `main.swift` doesn't compile**
+Cloud sessions run on **Linux, where the app doesn't compile**
 (AppKit/IOKit don't exist). The gate is CI on a macOS runner: universal
 build, `lipo -verify_arch`, `--selftest`, `plutil -lint` of the
 watchdog. If you couldn't compile, **say so in the PR** instead of
 writing "tested".
+
+On Linux, with the Swift toolchain from swift.org unpacked in the
+scratchpad: `swiftc -parse Sources/*.swift` catches syntax errors, and
+a file that imports only Foundation (`Updates.swift`) compiles and runs
+with its preconditions pasted in. Neither replaces CI.
 
 On a Mac:
 
@@ -126,10 +140,15 @@ To bring in a fix from Pilot Light:
 ```bash
 git remote add upstream https://github.com/CyrisXD/pilot-light
 git fetch upstream
-git cherry-pick <sha>   # on a branch, then rename Pilot Light → Decaffeinate
+git show <sha>   # upstream is one main.swift; here it is split
 ```
 
-After the cherry-pick, search for `pilotlight`, `PilotLight`,
+Upstream keeps the whole app in `main.swift`, so a cherry-pick of an
+app change stops on a modify/delete conflict. Port each hunk by hand,
+on a branch, into the `Sources/` file that owns that code (see the
+map), then rename Pilot Light → Decaffeinate.
+
+After porting, search for `pilotlight`, `PilotLight`,
 `Pilot Light` and `nz.sudolabs`: the credits are the only place they
 should remain.
 
