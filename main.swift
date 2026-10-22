@@ -44,6 +44,29 @@ func lidClosed() -> Bool? {
 }
 let hasLid = lidClosed() != nil
 
+// Whether Decaffeinate should hold the Mac awake right now. Every false here must lead to `disablesleep 0`.
+func isArmed(enabled: Bool, sessionActive: Bool, hasLid: Bool, screenLocked: Bool, awakeWhenLocked: Bool) -> Bool {
+    enabled && sessionActive && hasLid && !(screenLocked && !awakeWhenLocked)
+}
+
+// The sudoers rule: exactly the pmset commands in pmsetCmds, for one user, nothing else.
+func sudoersRule(user: String) -> String {
+    "\(user) ALL=(root) NOPASSWD: " + pmsetCmds.map { "/usr/bin/pmset \($0)" }.joined(separator: ", ") + "\n"
+}
+
+// The pmset arguments a shell command runs through `sudo -n /usr/bin/pmset`, e.g. the watchdog's.
+func sudoPmsetArgs(in shell: String) -> [String] {
+    let marker = "/usr/bin/sudo -n /usr/bin/pmset "
+    var found: [String] = [], rest = Substring(shell)
+    while let r = rest.range(of: marker) {
+        rest = rest[r.upperBound...]
+        let end = rest.range(of: " ||")?.lowerBound ?? rest.endIndex
+        found.append(String(rest[..<end]).trimmingCharacters(in: .whitespaces))
+        rest = rest[end...]
+    }
+    return found
+}
+
 // True when an external display is in use. With the lid closed that's a normal desk setup
 // (clamshell mode), so Decaffeinate leaves the displays and power mode alone.
 func externalDisplayActive() -> Bool {
@@ -157,7 +180,7 @@ class App: NSObject, NSApplicationDelegate {
     var lastChange = Date(), lastSample = Date.distantPast
     var capacityWh = 0.0
 
-    var armed: Bool { enabled && sessionActive && hasLid && !(screenLocked && !awakeWhenLocked) }
+    var armed: Bool { isArmed(enabled: enabled, sessionActive: sessionActive, hasLid: hasLid, screenLocked: screenLocked, awakeWhenLocked: awakeWhenLocked) }
     let powerKey = powerModeSettings()?.key
 
     func applicationDidFinishLaunching(_ n: Notification) {
@@ -368,7 +391,7 @@ class App: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         guard alert.runModal() == .alertFirstButtonReturn else { return false }
         let user = NSUserName()
-        let rule = "\(user) ALL=(root) NOPASSWD: " + pmsetCmds.map { "/usr/bin/pmset \($0)" }.joined(separator: ", ") + "\n"
+        let rule = sudoersRule(user: user)
         let tmp = NSTemporaryDirectory() + "decaffeinate.sudoers"
         try? rule.write(toFile: tmp, atomically: true, encoding: .utf8)
         let sh = "/usr/sbin/visudo -cf '\(tmp)' && /usr/bin/install -m 0440 -o root -g wheel '\(tmp)' \(sudoersPath)"
@@ -434,6 +457,28 @@ if CommandLine.arguments.contains("--selftest") {
     precondition(batteryDraw(["ExternalConnected": false, "Voltage": 12000, "Amperage": -500, "MaxCapacity": 5000])! == (6.0, 60.0)) // Intel
     precondition(batteryDraw(["ExternalConnected": true, "Voltage": 12000, "InstantAmperage": 2000, "AppleRawMaxCapacity": 8000]) == nil)
     precondition(pmsetCmds.contains("-b lowpowermode 1") && pmsetCmds.contains("-c powermode 2"))
+    // isArmed: any one of these ends the stay-awake, so each must flip the result on its own.
+    precondition(isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: false, awakeWhenLocked: false))
+    precondition(isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: true, awakeWhenLocked: true))
+    precondition(!isArmed(enabled: false, sessionActive: true, hasLid: true, screenLocked: false, awakeWhenLocked: true))
+    precondition(!isArmed(enabled: true, sessionActive: false, hasLid: true, screenLocked: false, awakeWhenLocked: true)) // fast user switch
+    precondition(!isArmed(enabled: true, sessionActive: true, hasLid: false, screenLocked: false, awakeWhenLocked: true)) // Mac mini, iMac
+    precondition(!isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: true, awakeWhenLocked: false))
+    // sudoersRule: one line, only whitelisted pmset commands, no wildcard.
+    let bobRule = sudoersRule(user: "bob")
+    precondition(bobRule.hasPrefix("bob ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 0, ") && bobRule.hasSuffix("\n"))
+    precondition(bobRule.split(separator: "\n").count == 1 && bobRule.components(separatedBy: ", ").count == pmsetCmds.count)
+    precondition(!bobRule.contains("*") && !bobRule.contains("NOPASSWD: ALL"))
+    // sudoPmsetArgs
+    precondition(sudoPmsetArgs(in: "a || b || /usr/bin/sudo -n /usr/bin/pmset -a disablesleep 0") == ["-a disablesleep 0"])
+    precondition(sudoPmsetArgs(in: "/usr/bin/sudo -n /usr/bin/pmset -a x 1 || /usr/bin/sudo -n /usr/bin/pmset -b y 2") == ["-a x 1", "-b y 2"])
+    precondition(sudoPmsetArgs(in: "/usr/bin/pmset -g").isEmpty)
+    // The watchdog runs as the user through the same sudoers rule: every command it runs must be whitelisted.
+    let agents = Bundle.main.bundlePath + "/Contents/Library/LaunchAgents/"
+    let wd = NSDictionary(contentsOfFile: agents + "io.github.dstmrk.decaffeinate.watchdog.plist")
+    let wdShell = (wd?["ProgramArguments"] as? [String])?.last ?? ""
+    precondition(!sudoPmsetArgs(in: wdShell).isEmpty, "watchdog plist missing from the bundle or runs no sudo pmset")
+    precondition(sudoPmsetArgs(in: wdShell).allSatisfy { pmsetCmds.contains($0) })
     precondition(Set(glyphs.keys) == ["active", "disabled"])
     precondition(run("/bin/echo", ["hi"]) == "hi\n")
     precondition(run("/bin/sh", ["-c", "head -c 200000 /dev/zero"]).utf8.count == 200_000) // more than a pipe buffer

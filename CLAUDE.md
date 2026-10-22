@@ -48,7 +48,8 @@ external dependencies, no network requests.
 - **Least privilege.** The sudoers rule grants only the exact commands
   in `pmsetCmds`. If `pmsetCmds` changes, **rename `sudoersPath`** so
   existing installs are asked to reinstall the helper; the watchdog's
-  command must stay inside that whitelist.
+  command must stay inside that whitelist (gate: the selftest reads the
+  bundled watchdog plist).
 
 ## Always-on rules
 
