@@ -23,7 +23,8 @@ external dependencies, no network requests.
 - `io.github.dstmrk.decaffeinate.watchdog.plist` — LaunchAgent that
   turns lid-close sleep back on if the app isn't running
 - `measure.sh` — measures power draw from battery telemetry (`logs/`)
-- `assets/` — icon (SVG source + `render-icon.swift` → `.icns`)
+- `assets/` — app icon: `AppIcon.svg` is the only source;
+  `render-icon.swift` turns it into the bundle's `.icns` during `build.sh`
 - `.github/workflows/ci.yml` — macOS build + selftest, hook tests
 - `.claude/` — hooks and skills for working with Claude
 

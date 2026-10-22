@@ -115,18 +115,19 @@ func statLine(_ label: String, sum: Double, n: Int, capacityWh: Double) -> Strin
     return String(format: "%@: %.1f W%@", label, w, hours)
 }
 
-// Menu bar template glyphs on an 18 pt grid: steaming solid cup = on, empty outline cup = off.
+// Menu bar template glyphs: Lucide "coffee" (ISC, see LICENSE) on its 24-unit grid, drawn at 18 pt so the
+// 2-unit stroke lands at 1.5 pt. Filled steaming cup = on, empty outline cup = off.
 // macOS tints templates for light and dark menu bars.
-let cupPath = "M3 6.5 H12 V11 C12 12.9 10.5 14.5 8.5 14.5 H6.5 C4.6 14.5 3 12.9 3 11 Z"
-let cupHandle = "<path d='M12 7.75 H13 C14.1 7.75 15 8.65 15 9.75 V10 C15 11.1 14.1 12 13 12 H12' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'/>"
-let saucer = "<line x1='2.5' y1='16.5' x2='15.5' y2='16.5' stroke='black' stroke-width='1.5' stroke-linecap='round'/>"
-let steam = "<path d='M6 5 C5.3 4.2 6.7 3.3 6 2 M9 5 C8.3 4.2 9.7 3.3 9 2' fill='none' stroke='black' stroke-width='1.25' stroke-linecap='round'/>"
+let lucideStroke = "fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'"
+let cupOutline = "<path d='M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1' \(lucideStroke)/>"
+let cupFill = "<path d='M4 8h12a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z' fill='black'/>"
+let steam = "<path d='M6 2v2M10 2v2M14 2v2' \(lucideStroke)/>"
 let glyphSVG = [
-    "active": "<path d='\(cupPath)' fill='black'/>" + cupHandle + steam + saucer,
-    "disabled": "<path d='\(cupPath)' fill='none' stroke='black' stroke-width='1.5' stroke-linejoin='round'/>" + cupHandle + saucer,
+    "active": cupFill + cupOutline + steam,
+    "disabled": cupOutline,
 ]
 let glyphs: [String: NSImage] = glyphSVG.mapValues { body in
-    let svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18' width='18' height='18'>\(body)</svg>"
+    let svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='18' height='18'>\(body)</svg>"
     // SF Symbol fallback in case this macOS can't decode SVG into NSImage.
     let img = NSImage(data: Data(svg.utf8)) ?? NSImage(systemSymbolName: "cup.and.saucer", accessibilityDescription: nil)!
     img.size = NSSize(width: 18, height: 18)
