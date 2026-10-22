@@ -1,105 +1,104 @@
 ---
 name: decision-ledger
-description: Use when closing out a task and handing work back to the user — writing the PR title or description, summarizing what was built, auditing the decisions taken where the prompt or the spec was silent, or reporting the size/cost of a change. Covers the squash merge (the PR title becomes the commit subject with a conventional-commit prefix in Italian, the body is written at ~70 columns because GitHub rewraps it, both finished before the merge), the choices ledger (what counts as a decision, entry format, verdict and confidence, least-confident first, an empty ledger on substantial work is a symptom), filing a leftover finding as a GitHub issue, and the mandatory cost table (production code, comments, selftest, docs, plus new structural surfaces). CLAUDE.md regola 8.
+description: Use when closing out a task and handing work back to the user — writing the PR title or description, summarizing what was built, auditing the decisions taken where the prompt or the spec was silent, or reporting the size/cost of a change. Covers the squash merge (the PR title becomes the commit subject with a conventional-commit prefix, the body is written at ~70 columns because GitHub rewraps it, both finished before the merge), the choices ledger (what counts as a decision, entry format, verdict and confidence, least-confident first, an empty ledger on substantial work is a symptom), filing a leftover finding as a GitHub issue, and the mandatory cost table (production code, comments, selftest, docs, plus new structural surfaces). CLAUDE.md rule 8.
 ---
 
-# decision-ledger — consegna le decisioni, non il diff
+# decision-ledger — deliver the decisions, not the diff
 
-Leggere il diff riga per riga non regge il ritmo con cui il codice viene
-prodotto, e una review che non regge il ritmo diventa una firma. Si
-sposta la review sull'oggetto dove il giudizio umano decide davvero: le
-decisioni. Questa skill descrive l'artefatto di fine task. È un **audit
-puro**: non modifica codice.
+Reading a diff line by line can't keep pace with how fast code gets
+written, and a review that can't keep pace turns into a signature. So
+the review moves to the object where human judgment actually decides
+something: the decisions. This skill describes the end-of-task artifact.
+It is a **pure audit**: it changes no code.
 
-## Cos'è una decisione
+## What a decision is
 
-Una scelta fatta **dove il prompt, la spec o `CLAUDE.md` tacevano**, e
-che l'utente potrebbe voler ribaltare. In quest'app, per esempio:
+A choice made **where the prompt, the spec or `CLAUDE.md` were silent**,
+and that the user might want to overturn. In this app, for example:
 
-- una soglia inventata: intervallo di polling, cutoff di batteria o
-  termico, finestra di assestamento prima di campionare il consumo;
-- cosa succede al Mac in uno stato non previsto (coperchio chiuso +
-  display esterno, schermo bloccato, crash a metà transizione);
-- un nuovo comando in `pmsetCmds`, cioè un allargamento del sudoers;
-- una chiave `UserDefaults` o una voce di menu nuova (diventa contratto
-  con le installazioni esistenti);
-- **una cosa che hai deciso di NON fare** quando qualcuno potrebbe
-  aspettarsela in questa PR;
-- una divergenza consapevole da upstream (Pilot Light) o da una
-  convenzione del repo.
+- an invented threshold: polling interval, battery or heat cutoff, the
+  settling window before sampling power draw;
+- what happens to the Mac in an unplanned state (lid closed + external
+  display, locked screen, crash mid-transition);
+- a new command in `pmsetCmds`, i.e. a wider sudoers rule;
+- a new `UserDefaults` key or menu item (it becomes a contract with
+  existing installs);
+- **something you decided NOT to do** when someone could reasonably
+  expect it in this PR;
+- a deliberate divergence from upstream (Pilot Light) or from a repo
+  convention.
 
-Non sono decisioni: naming interno, formattazione, e tutto ciò che una
-regola di `CLAUDE.md` già impone.
+Not decisions: internal naming, formatting, and anything a `CLAUDE.md`
+rule already mandates.
 
-## Formato di una voce
+## Entry format
 
-Ogni voce si legge da sola, senza il diff e senza la chat.
+Each entry reads on its own, without the diff and without the chat.
 
 ```markdown
-### <La scelta in una riga>
+### <The choice in one line>
 
-- **Scenario:** cosa succede all'utente, end-to-end
-- **La spec taceva su:** cosa non era specificato
-- **Alternativa scartata:** …e perché ha perso
-- **Conseguenze:** cosa diventa più costoso da cambiare dopo
-- **Verdetto:** solida · da rivedere · serve l'utente — confidence alta/media/bassa
+- **Scenario:** what happens to the user, end to end
+- **The spec was silent on:** what wasn't specified
+- **Rejected alternative:** …and why it lost
+- **Consequences:** what becomes more expensive to change later
+- **Verdict:** solid · to revisit · needs the user — confidence high/medium/low
 ```
 
-## Regole dure
+## Hard rules
 
-- **"Funziona" non è un verdetto.** La domanda è quale garanzia regge
-  il comportamento (un `precondition`, la CI, una verifica manuale
-  descritta), non se il build è verde.
-- **Dalla meno confidente alla più confidente.** L'attenzione di chi
-  legge va spesa dove sei meno sicuro.
-- **Un ledger vuoto su un lavoro sostanzioso è un sintomo**: rileggi la
-  sessione e ritrova le scelte.
-- **L'audit non blocca.** Una voce "serve l'utente" senza risposta non
-  ferma la consegna: adotti la scelta provvisoria, la dichiari tale e la
-  tieni reversibile.
-- **Dichiara cosa non hai potuto verificare** (per esempio: niente
-  build locale perché la sessione era su Linux; comportamento a
-  coperchio chiuso non provato su un MacBook).
+- **"It works" is not a verdict.** The question is which guarantee
+  holds the behavior up (a `precondition`, CI, a described manual
+  check), not whether the build is green.
+- **Least confident first.** The reader's attention is finite: spend it
+  where you are least sure.
+- **An empty ledger on substantial work is a symptom**: reread the
+  session and find the choices.
+- **The audit doesn't block.** A "needs the user" entry without an
+  answer doesn't stop delivery: adopt the provisional call, declare it
+  as such and keep it reversible.
+- **Say what you couldn't verify** (for example: no local build because
+  the session ran on Linux; lid-closed behavior not tried on a MacBook).
 
-## Il corpo della PR è un messaggio di commit
+## The PR body is a commit message
 
-Con il merge in squash, titolo e corpo della PR diventano il commit su
-`main`: storia git, quella a cui porta `git blame`. Quindi:
+With squash merging, the PR title and body become the commit on `main`:
+git history, the place `git blame` leads to. So:
 
-- **titolo** = soggetto del commit: prefisso conventional-commit, in
-  italiano (`fix: …`, `chore: …`, `perf: …`);
-- **corpo a ~70 colonne**: GitHub lo rimanda a capo a ~72 e perde
-  l'indentazione di continuazione delle liste. Bullet di una riga sola,
-  oppure paragrafi con un lead-in in grassetto; tabelle strette;
-- **si scrive prima del merge**: dopo è storia immutabile;
-- lo squash crea un commit nuovo: per un follow-up si riparte da `main`
-  (`git checkout -B <branch> origin/main`), anche con lo stesso nome.
+- **title** = commit subject, with a conventional-commit prefix
+  (`fix: …`, `chore: …`, `perf: …`);
+- **body at ~70 columns**: GitHub rewraps it at ~72 and loses the
+  continuation indent of lists. Single-line bullets, or paragraphs with
+  a bold lead-in; keep tables narrow;
+- **written before the merge**: afterwards it is immutable history;
+- a squash creates a new commit: for a follow-up, restart from `main`
+  (`git checkout -B <branch> origin/main`), even with the same name.
 
-## Un finding diventa un'issue
+## A finding becomes an issue
 
-Una voce "da rivedere" che resta aperta, o un difetto trovato fuori
-scope, diventa un'issue GitHub prima di chiudere il task, e la PR la
-linka. Prima cerca fra le issue aperte. Il corpo si legge da solo:
-**Problema** (scenario concreto, numeri, data), **Fix** (decisa, o
-opzioni con la raccomandata), **Test** (edge case da coprire),
-**Trigger** (cosa lo rende urgente, se rimandato). Un fix completo porta
-`Closes #N` nella PR; uno parziale cita l'issue senza chiuderla.
+A "to revisit" entry left open, or a defect found out of scope, becomes
+a GitHub issue before the task closes, and the PR links it. Search open
+issues first. The body reads on its own: **Problem** (concrete scenario,
+numbers, date), **Fix** (decided, or options with the recommended one),
+**Tests** (edge cases to cover), **Trigger** (what makes it urgent, if
+deferred). A complete fix puts `Closes #N` in the PR; a partial one
+mentions the issue without closing it.
 
-## La tabella del costo (sempre per ultima)
+## The cost table (always last)
 
 ```bash
 git diff --stat origin/main...HEAD
 ```
 
-|                                    | aggiunte | tolte | netto |
-| ---------------------------------- | -------- | ----- | ----- |
-| Codice di produzione (no commenti) |          |       |       |
-| Commenti                           |          |       |       |
-| Selftest                           |          |       |       |
-| Doc, CI e config Claude            |          |       |       |
+|                                    | added | removed | net |
+| ---------------------------------- | ----- | ------- | --- |
+| Production code (no comments)      |       |         |     |
+| Comments                           |       |         |     |
+| Selftest                           |       |         |     |
+| Docs, CI and Claude config         |       |         |     |
 
-Poi un paragrafo sulle **superfici strutturali** nuove o tolte, quelle
-che un conteggio di righe nasconde: un comando nel sudoers, un
-LaunchAgent, una chiave `UserDefaults`, una voce di menu, un timer, una
-richiesta di rete, un job CI. Una grossa aggiunta netta per un cambio di
-comportamento piccolo è un finding da dichiarare, non da seppellire.
+Then a paragraph on the **structural surfaces** added or removed, the
+ones a line count hides: a sudoers command, a LaunchAgent, a
+`UserDefaults` key, a menu item, a timer, a network request, a CI job. A
+large net addition for a small behavior change is a finding to declare,
+not to bury.

@@ -5,7 +5,7 @@
 # expected exit code (2 = block, 0 = pass). Run from repo root:
 #   ./.claude/hooks/test-block-push-to-main.sh
 #
-# This is a defense-in-depth net for CLAUDE.md regola 1: a regex that
+# This is a defense-in-depth net for CLAUDE.md rule 1: a regex that
 # fails to block `develop:main`, `:main`, `+main`, force-push refspec
 # or `refs/heads/main` would defeat the whole purpose of the hook.
 
@@ -81,15 +81,15 @@ assert_block "git push origin main:main"
 
 # --- BLOCK cases: global git options between `git` and `push` (`-C <dir>`,
 # `-c k=v`, `--git-dir=…`). A regex anchored on `git push` adjacency lets
-# `git -C /repo push origin main` through (bypass found 2026-07-02). ---
+# `git -C /repo push origin main` through. ---
 assert_block "git -C /repo push origin main"
 assert_block "git -C /repo push origin develop:main"
 assert_block "git -c protocol.version=2 push origin main"
 assert_block "git --git-dir=/repo/.git push origin HEAD:main"
 
-# --- BLOCK cases: push che spediscono main SENZA nominarlo. `--all` e
-# `--mirror` includono ogni branch locale, main compreso: una regex che cerca
-# il token "main" nel refspec non li vede (bypass trovato 2026-08-03). ---
+# --- BLOCK cases: pushes that send main WITHOUT naming it. `--all` and
+# `--mirror` include every local branch, main too: a regex looking for the
+# "main" token in the refspec misses them. ---
 assert_block "git push --all origin"
 assert_block "git push origin --all"
 assert_block "git push --mirror origin"

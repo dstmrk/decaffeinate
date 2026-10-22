@@ -6,7 +6,7 @@
 # 0 = pass). Run from repo root:
 #   ./.claude/hooks/test-block-commit-on-main.sh
 #
-# Defense-in-depth net for CLAUDE.md regola 1: a hook that stops blocking
+# Defense-in-depth net for CLAUDE.md rule 1: a hook that stops blocking
 # `git commit` on main (or starts blocking commits on feature branches)
 # must fail CI, not pass silently.
 
