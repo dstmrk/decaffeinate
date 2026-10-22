@@ -54,7 +54,7 @@ If you previously installed Pilot Light, remove its helper first (**Remove helpe
 
 ## Uninstall
 
-Choose **Uninstall…** from the menu. Decaffeinate turns lid-close sleep back on, removes the helper, the background check, the login item and its settings, moves itself to the Bin and quits. Dragging the app to the Bin instead leaves the helper behind; remove it by hand with `sudo rm /etc/sudoers.d/decaffeinate`.
+Choose **Uninstall…** from the menu. Decaffeinate turns lid-close sleep back on, removes the helper, the background check, the login item and its settings, moves itself to the Bin and quits. Dragging the app to the Bin instead leaves the helper behind; remove it by hand with `sudo pmset -a disablesleep 0 && sudo rm /etc/sudoers.d/decaffeinate`. Turn sleep back on first: once the rule is gone, neither the app nor the watchdog can.
 
 ## Development
 
