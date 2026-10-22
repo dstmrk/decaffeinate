@@ -1,7 +1,8 @@
-// Renders assets/AppIcon.svg into assets/AppIcon.icns. Run after editing the SVG:
-//   swift assets/render-icon.swift
+// Renders assets/AppIcon.svg into the .icns at the given path. build.sh runs it on every build:
+//   swift assets/render-icon.swift <output.icns>
 import AppKit
 
+guard CommandLine.arguments.count == 2 else { fatalError("usage: swift render-icon.swift <output.icns>") }
 let dir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
 guard let svg = NSImage(contentsOf: dir.appendingPathComponent("AppIcon.svg")) else { fatalError("can't load AppIcon.svg") }
 let iconset = FileManager.default.temporaryDirectory.appendingPathComponent("AppIcon.iconset")
@@ -25,6 +26,6 @@ for base in [16, 32, 128, 256, 512] {
 
 let p = Process()
 p.executableURL = URL(fileURLWithPath: "/usr/bin/iconutil")
-p.arguments = ["-c", "icns", iconset.path, "-o", dir.appendingPathComponent("AppIcon.icns").path]
+p.arguments = ["-c", "icns", iconset.path, "-o", CommandLine.arguments[1]]
 try p.run(); p.waitUntilExit()
-print(p.terminationStatus == 0 ? "wrote assets/AppIcon.icns" : "iconutil failed")
+exit(p.terminationStatus) // non-zero fails build.sh (set -e)
