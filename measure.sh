@@ -2,7 +2,7 @@
 # Usage: ./measure.sh <label> [minutes] [interval-seconds]
 # Logs whole-system power every interval to logs/<label>.csv, then prints a summary.
 # No admin needed: reads battery telemetry from ioreg. Works with the lid closed
-# as long as the Mac stays awake (Pilot Light helper installed).
+# as long as the Mac stays awake (Decaffeinate helper installed).
 set -e
 cd "$(dirname "$0")"
 LABEL=${1:?label required, e.g. baseline-open}
