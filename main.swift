@@ -115,19 +115,20 @@ func statLine(_ label: String, sum: Double, n: Int, capacityWh: Double) -> Strin
     return String(format: "%@: %.1f W%@", label, w, hours)
 }
 
-// Menu bar template glyphs on an 18 pt grid: solid flame = on, outline = off.
+// Menu bar template glyphs on an 18 pt grid: steaming solid cup = on, empty outline cup = off.
 // macOS tints templates for light and dark menu bars.
-let flamePath = "M9 1.75 C9 1.75 13.25 6.1 13.25 9.9 C13.25 12.35 11.35 14.25 9 14.25 C6.65 14.25 4.75 12.35 4.75 9.9 C4.75 6.1 9 1.75 9 1.75 Z"
-let lidLine = "<line x1='3.5' y1='16.5' x2='14.5' y2='16.5' stroke='black' stroke-width='1.5' stroke-linecap='round'/>"
-let flameOutline = "<path d='\(flamePath)' fill='none' stroke='black' stroke-width='1.5' stroke-linejoin='round'/>"
+let cupPath = "M3 6.5 H12 V11 C12 12.9 10.5 14.5 8.5 14.5 H6.5 C4.6 14.5 3 12.9 3 11 Z"
+let cupHandle = "<path d='M12 7.75 H13 C14.1 7.75 15 8.65 15 9.75 V10 C15 11.1 14.1 12 13 12 H12' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'/>"
+let saucer = "<line x1='2.5' y1='16.5' x2='15.5' y2='16.5' stroke='black' stroke-width='1.5' stroke-linecap='round'/>"
+let steam = "<path d='M6 5 C5.3 4.2 6.7 3.3 6 2 M9 5 C8.3 4.2 9.7 3.3 9 2' fill='none' stroke='black' stroke-width='1.25' stroke-linecap='round'/>"
 let glyphSVG = [
-    "active": "<path d='\(flamePath) M9 8.2 C9 8.2 11 10.3 11 11.6 C11 12.7 10.1 13.4 9 13.4 C7.9 13.4 7 12.7 7 11.6 C7 10.3 9 8.2 9 8.2 Z' fill='black' fill-rule='evenodd'/>" + lidLine,
-    "disabled": flameOutline + lidLine,
+    "active": "<path d='\(cupPath)' fill='black'/>" + cupHandle + steam + saucer,
+    "disabled": "<path d='\(cupPath)' fill='none' stroke='black' stroke-width='1.5' stroke-linejoin='round'/>" + cupHandle + saucer,
 ]
 let glyphs: [String: NSImage] = glyphSVG.mapValues { body in
     let svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18' width='18' height='18'>\(body)</svg>"
     // SF Symbol fallback in case this macOS can't decode SVG into NSImage.
-    let img = NSImage(data: Data(svg.utf8)) ?? NSImage(systemSymbolName: "flame", accessibilityDescription: nil)!
+    let img = NSImage(data: Data(svg.utf8)) ?? NSImage(systemSymbolName: "cup.and.saucer", accessibilityDescription: nil)!
     img.size = NSSize(width: 18, height: 18)
     img.isTemplate = true
     return img
