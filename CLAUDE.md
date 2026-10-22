@@ -19,8 +19,8 @@ external dependencies, no network requests.
 **Map:**
 
 - `main.swift` — the whole app; the `--selftest` block is at the end
-- `build.sh` — build + `Info.plist` (version from the `VERSION` env var;
-  a release tag sets it)
+- `build.sh` — build + `Info.plist` (version from the `VERSION` env var, else
+  the latest git tag, else `0.0.0`; CI sets it from a release tag)
 - `io.github.dstmrk.decaffeinate.watchdog.plist` — LaunchAgent that
   turns lid-close sleep back on if the app isn't running
 - `measure.sh` — measures power draw from battery telemetry (`logs/`)

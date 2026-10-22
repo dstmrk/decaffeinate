@@ -6,7 +6,9 @@ APP="$HOME/Applications/Decaffeinate.app"
 mkdir -p "$APP/Contents/MacOS"
 # Universal (Apple Silicon + Intel), runs on macOS 13 Ventura and later.
 MIN=13.0
-VERSION=${VERSION:-0.9.1}
+# The VERSION env var wins (a release tag sets it in CI); otherwise the latest git tag, else 0.0.0.
+VERSION=${VERSION:-$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')}
+VERSION=${VERSION:-0.0.0}
 TMP=$(mktemp -d)
 swiftc -O -target arm64-apple-macos$MIN main.swift -o "$TMP/arm64"
 swiftc -O -target x86_64-apple-macos$MIN main.swift -o "$TMP/x86_64"
