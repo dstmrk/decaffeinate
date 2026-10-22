@@ -49,6 +49,12 @@ func isArmed(enabled: Bool, sessionActive: Bool, hasLid: Bool, screenLocked: Boo
     enabled && sessionActive && hasLid && !(screenLocked && !awakeWhenLocked)
 }
 
+// The watchdog is only registered on Macs with a lid. When it isn't running, a crash with the lid closed
+// leaves the Mac awake until Decaffeinate is opened again.
+func watchdogNeedsAttention(hasLid: Bool, status: SMAppService.Status) -> Bool {
+    hasLid && status != .enabled
+}
+
 // The sudoers rule: exactly the pmset commands in pmsetCmds, for one user, nothing else.
 func sudoersRule(user: String) -> String {
     "\(user) ALL=(root) NOPASSWD: " + pmsetCmds.map { "/usr/bin/pmset \($0)" }.joined(separator: ", ") + "\n"
@@ -166,6 +172,7 @@ class App: NSObject, NSApplicationDelegate {
     let cutoffItem = NSMenuItem(title: "Sleep when battery below", action: nil, keyEquivalent: "")
     let lockedItem = NSMenuItem(title: "Keep awake when screen locked", action: #selector(flipLocked), keyEquivalent: "")
     let loginItem = NSMenuItem(title: "Launch at login", action: #selector(flipLogin), keyEquivalent: "")
+    let watchdogItem = NSMenuItem(title: "Crash protection is off, fix…", action: #selector(openLoginItems), keyEquivalent: "")
     var lowPower: Bool { UserDefaults.standard.object(forKey: "lowPower") as? Bool ?? true }
     var enabled = UserDefaults.standard.object(forKey: "enabled") as? Bool ?? true
     var sessionActive = true
@@ -194,7 +201,7 @@ class App: NSObject, NSApplicationDelegate {
             cutoffs.addItem(i)
         }
         cutoffItem.submenu = cutoffs
-        [toggle, lowPowerItem, lockedItem, loginItem, cutoffItem].forEach { $0.target = self; menu.addItem($0) }
+        [watchdogItem, toggle, lowPowerItem, lockedItem, loginItem, cutoffItem].forEach { $0.target = self; menu.addItem($0) }
         menu.addItem(.separator())
         let header = NSMenuItem(title: "Average power on battery", action: nil, keyEquivalent: "")
         header.isEnabled = false
@@ -228,11 +235,14 @@ class App: NSObject, NSApplicationDelegate {
         ws.addObserver(forName: NSWorkspace.willPowerOffNotification, object: nil, queue: .main) { _ in restore() }
 
         restorePowerMode() // in case a previous run quit or crashed with the lid closed
-        if hasLid { try? watchdog.register() }
+        if hasLid {
+            do { try watchdog.register() } catch { NSLog("Decaffeinate: watchdog registration failed: \(error)") }
+        }
         // Polls the lid every 2 seconds. An IOKit interest notification would react faster, but polling is simpler and cheap.
         // The tolerance lets macOS coalesce this wakeup with other timers instead of waking the CPU on its own.
         Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.tick() }.tolerance = 0.5
         apply()
+        warnIfWatchdogOff()
     }
 
     func applicationWillTerminate(_ n: Notification) { restore() }
@@ -246,6 +256,22 @@ class App: NSObject, NSApplicationDelegate {
         NSApp.terminate(nil)
         return false
     }
+
+    // Once per launch; the menu item keeps showing it after that.
+    func warnIfWatchdogOff() {
+        guard watchdogNeedsAttention(hasLid: hasLid, status: watchdog.status) else { return }
+        let alert = NSAlert()
+        alert.messageText = "Crash protection is off"
+        alert.informativeText = "The background check that turns sleep back on after a crash is not running. " +
+            "If Decaffeinate crashes with the lid closed, your Mac stays awake until you open it again. " +
+            "Allow Decaffeinate in System Settings › General › Login Items."
+        alert.addButton(withTitle: "Open Login Items")
+        alert.addButton(withTitle: "Later")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn { openLoginItems() }
+    }
+
+    @objc func openLoginItems() { SMAppService.openSystemSettingsLoginItems() }
 
     func apply() {
         if installing || !ensureHelper() { return }
@@ -341,6 +367,7 @@ class App: NSObject, NSApplicationDelegate {
         lockedItem.state = awakeWhenLocked ? .on : .off
         lockedItem.isHidden = !hasLid
         cutoffItem.submenu?.items.forEach { $0.state = $0.tag == minBatteryPercent ? .on : .off }
+        watchdogItem.isHidden = !watchdogNeedsAttention(hasLid: hasLid, status: watchdog.status)
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         refreshStats()
     }
@@ -479,6 +506,12 @@ if CommandLine.arguments.contains("--selftest") {
     let wdShell = (wd?["ProgramArguments"] as? [String])?.last ?? ""
     precondition(!sudoPmsetArgs(in: wdShell).isEmpty, "watchdog plist missing from the bundle or runs no sudo pmset")
     precondition(sudoPmsetArgs(in: wdShell).allSatisfy { pmsetCmds.contains($0) })
+    // The watchdog is the crash safety net: off (declined, disabled in Login Items, failed to register) must be visible.
+    precondition(!watchdogNeedsAttention(hasLid: true, status: .enabled))
+    precondition(watchdogNeedsAttention(hasLid: true, status: .requiresApproval))
+    precondition(watchdogNeedsAttention(hasLid: true, status: .notRegistered))
+    precondition(watchdogNeedsAttention(hasLid: true, status: .notFound))
+    precondition(!watchdogNeedsAttention(hasLid: false, status: .notRegistered)) // no lid, never registered
     precondition(Set(glyphs.keys) == ["active", "disabled"])
     precondition(run("/bin/echo", ["hi"]) == "hi\n")
     precondition(run("/bin/sh", ["-c", "head -c 200000 /dev/zero"]).utf8.count == 200_000) // more than a pipe buffer
