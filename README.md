@@ -61,7 +61,7 @@ Choose **Uninstall…** from the menu. Decaffeinate turns lid-close sleep back o
 ## Development
 
 - `Decaffeinate --selftest` (the binary inside the app bundle) checks the core logic; CI runs it on a macOS runner with the universal build on every pull request that touches the app.
-- Releases: `git tag v1.0.0 && git push origin v1.0.0`. CI runs the same checks as on a pull request, then publishes `Decaffeinate-1.0.0.dmg` as a GitHub Release.
+- Releases: `git tag v1.0.0 && git push origin v1.0.0`, or publish a release with a new `v1.0.0` tag on GitHub. CI runs every check, then attaches `Decaffeinate-1.0.0.dmg` to the release, creating it if the tag came from git.
 - `./measure.sh closed-batt 10` logs whole-Mac power from battery telemetry, to reproduce the numbers above.
 - The app icon is `assets/AppIcon.svg`; `build.sh` renders it into the bundle's `.icns` on every build.
 
