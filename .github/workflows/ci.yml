@@ -1,8 +1,10 @@
 # Builds the universal app and runs its self-test on every pull request and on
 # main. It's the only check that compiles Sources/: cloud sessions run on
 # Linux, where AppKit isn't available.
-# A v* tag (git tag v1.0.0 && git push origin v1.0.0) runs the same checks, then
-# publishes Decaffeinate-1.0.0.dmg as a GitHub Release.
+# A v* tag runs the same checks, then attaches Decaffeinate-1.0.0.dmg to the
+# GitHub Release v1.0.0. The tag can come from git (git tag v1.0.0 && git push
+# origin v1.0.0), which creates the release, or from a release published on
+# GitHub, which creates the tag and keeps its own title and notes.
 name: CI
 on:
   pull_request:
@@ -75,4 +77,9 @@ jobs:
         timeout-minutes: 5
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" Decaffeinate-*.dmg --repo "$GITHUB_REPOSITORY" --generate-notes
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" Decaffeinate-*.dmg --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" Decaffeinate-*.dmg --repo "$GITHUB_REPOSITORY" --generate-notes
+          fi
