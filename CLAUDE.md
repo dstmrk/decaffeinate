@@ -36,8 +36,9 @@ check (this repo's latest GitHub release, never upstream's).
 - `measure.sh` — measures power draw from battery telemetry (`logs/`)
 - `assets/` — app icon: `AppIcon.svg` is the only source;
   `render-icon.swift` turns it into the bundle's `.icns` during `build.sh`
-- `.github/workflows/ci.yml` — macOS build + selftest, hook tests; on a
-  `v*` tag, also the `.dmg` and the GitHub Release
+- `.github/workflows/ci.yml` — macOS build + selftest, hook tests, each
+  only when the changed files can affect it; on a `v*` tag, all of them,
+  then the `.dmg` and the GitHub Release
 - `.claude/` — hooks and skills for working with Claude
 
 ## Guiding principles
