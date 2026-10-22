@@ -60,6 +60,14 @@ func sudoersRule(user: String) -> String {
     "\(user) ALL=(root) NOPASSWD: " + pmsetCmds.map { "/usr/bin/pmset \($0)" }.joined(separator: ", ") + "\n"
 }
 
+// Shell script run as root by installHelper. The temp file is created by root in /tmp (sticky, root-owned; not $TMPDIR, which
+// could point into a user-owned directory) with mode 0600, so nothing the user can write sits between the check and the install. No quotes or backslashes, so it embeds
+// in an AppleScript string as is.
+func installScript(rule: String, path: String) -> String {
+    "t=$(/usr/bin/mktemp /tmp/decaffeinate.XXXXXX) && /bin/echo '\(rule.trimmingCharacters(in: .newlines))' > $t && " +
+        "/usr/sbin/visudo -cf $t && /usr/bin/install -m 0440 -o root -g wheel $t \(path); s=$?; /bin/rm -f $t; exit $s"
+}
+
 // The pmset arguments a shell command runs through `sudo -n /usr/bin/pmset`, e.g. the watchdog's.
 func sudoPmsetArgs(in shell: String) -> [String] {
     let marker = "/usr/bin/sudo -n /usr/bin/pmset "
@@ -419,9 +427,7 @@ class App: NSObject, NSApplicationDelegate {
         guard alert.runModal() == .alertFirstButtonReturn else { return false }
         let user = NSUserName()
         let rule = sudoersRule(user: user)
-        let tmp = NSTemporaryDirectory() + "decaffeinate.sudoers"
-        try? rule.write(toFile: tmp, atomically: true, encoding: .utf8)
-        let sh = "/usr/sbin/visudo -cf '\(tmp)' && /usr/bin/install -m 0440 -o root -g wheel '\(tmp)' \(sudoersPath)"
+        let sh = installScript(rule: rule, path: sudoersPath)
         NSAppleScript(source: "do shell script \"\(sh)\" with administrator privileges")?.executeAndReturnError(nil)
         return FileManager.default.fileExists(atPath: sudoersPath)
     }
@@ -500,6 +506,15 @@ if CommandLine.arguments.contains("--selftest") {
     precondition(sudoPmsetArgs(in: "a || b || /usr/bin/sudo -n /usr/bin/pmset -a disablesleep 0") == ["-a disablesleep 0"])
     precondition(sudoPmsetArgs(in: "/usr/bin/sudo -n /usr/bin/pmset -a x 1 || /usr/bin/sudo -n /usr/bin/pmset -b y 2") == ["-a x 1", "-b y 2"])
     precondition(sudoPmsetArgs(in: "/usr/bin/pmset -g").isEmpty)
+    // installScript runs as root inside an AppleScript string: the file is made by root, validated, then installed,
+    // and the script needs no quote or backslash escaping.
+    let script = installScript(rule: bobRule, path: "/etc/sudoers.d/x")
+    precondition(!bobRule.contains("'") && !script.contains("\"") && !script.contains("\\"))
+    precondition(script.contains("echo '" + String(bobRule.dropLast()) + "'")) // one line, trailing newline left to echo
+    precondition(script.hasPrefix("t=$(/usr/bin/mktemp /tmp/decaffeinate.XXXXXX) &&")) // root-owned, 0600, created exclusively, in sticky /tmp
+    precondition(!script.contains(NSTemporaryDirectory())) // nothing the user can write between check and install
+    precondition(script.range(of: "/usr/sbin/visudo -cf $t")!.lowerBound < script.range(of: "/usr/bin/install -m 0440 -o root -g wheel $t /etc/sudoers.d/x")!.lowerBound)
+    precondition(script.hasSuffix("; s=$?; /bin/rm -f $t; exit $s")) // cleaned up on success and failure
     // The watchdog runs as the user through the same sudoers rule: every command it runs must be whitelisted.
     let agents = Bundle.main.bundlePath + "/Contents/Library/LaunchAgents/"
     let wd = NSDictionary(contentsOfFile: agents + "io.github.dstmrk.decaffeinate.watchdog.plist")
