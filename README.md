@@ -37,7 +37,7 @@ open ~/Applications/Decaffeinate.app
 
 Needs the Xcode command line tools. Builds a universal app (Apple silicon and Intel) for macOS 13 and later, ad-hoc signed. The whole app is [`main.swift`](main.swift).
 
-1. Click the flame in the menu bar, then **Install helper (admin)…**. This one admin prompt adds a sudoers rule that allows only `pmset` sleep and Low Power changes.
+1. On first launch, click **Install…**. This one admin prompt adds a sudoers rule that allows only `pmset` sleep and Low Power changes. Decaffeinate can't work without it, so declining quits the app.
 2. Close the lid.
 
 While the app is on, the Mac also won't idle-sleep with the lid open (the display still turns off).
@@ -48,7 +48,7 @@ If you previously installed Pilot Light, remove its helper first (**Remove helpe
 
 ## Uninstall
 
-Choose **Remove helper…** from the menu, quit the app, and drag it to the Bin. To remove the helper by hand instead: `sudo rm /etc/sudoers.d/decaffeinate`.
+Choose **Uninstall…** from the menu. Decaffeinate turns lid-close sleep back on, removes the helper, the background check, the login item and its settings, moves itself to the Bin and quits. Dragging the app to the Bin instead leaves the helper behind; remove it by hand with `sudo rm /etc/sudoers.d/decaffeinate`.
 
 ## Development
 
