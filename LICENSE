@@ -22,7 +22,7 @@ SOFTWARE.
 
 ---
 
-The menu bar glyphs in main.swift and the cup in assets/AppIcon.svg are
+The menu bar glyphs in Sources/App.swift and the cup in assets/AppIcon.svg are
 the "coffee" icon from Lucide (https://lucide.dev), modified (filled cup,
 colours), under the ISC License:
 

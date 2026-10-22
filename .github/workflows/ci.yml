@@ -1,5 +1,5 @@
 # Builds the universal app and runs its self-test on every pull request and on
-# main. It's the only check that compiles main.swift: cloud sessions run on
+# main. It's the only check that compiles Sources/: cloud sessions run on
 # Linux, where AppKit isn't available.
 # A v* tag (git tag v1.0.0 && git push origin v1.0.0) runs the same checks, then
 # publishes Decaffeinate-1.0.0.dmg as a GitHub Release.

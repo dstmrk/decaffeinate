@@ -39,7 +39,7 @@ cd decaffeinate
 open ~/Applications/Decaffeinate.app
 ```
 
-Needs the Xcode command line tools. Builds a universal app (Apple silicon and Intel) for macOS 13 and later, ad-hoc signed. The whole app is [`main.swift`](main.swift).
+Needs the Xcode command line tools. Builds a universal app (Apple silicon and Intel) for macOS 13 and later, ad-hoc signed. The whole app is in [`Sources/`](Sources), one file per domain; `Sources/Selftest.swift` holds the self-test.
 
 ## First launch
 
