@@ -115,15 +115,14 @@ func statLine(_ label: String, sum: Double, n: Int, capacityWh: Double) -> Strin
     return String(format: "%@: %.1f W%@", label, w, hours)
 }
 
-// Menu bar template glyphs on an 18 pt grid: solid flame = on, outline = off,
-// outline with a dot = helper not installed. macOS tints templates for light and dark menu bars.
+// Menu bar template glyphs on an 18 pt grid: solid flame = on, outline = off.
+// macOS tints templates for light and dark menu bars.
 let flamePath = "M9 1.75 C9 1.75 13.25 6.1 13.25 9.9 C13.25 12.35 11.35 14.25 9 14.25 C6.65 14.25 4.75 12.35 4.75 9.9 C4.75 6.1 9 1.75 9 1.75 Z"
 let lidLine = "<line x1='3.5' y1='16.5' x2='14.5' y2='16.5' stroke='black' stroke-width='1.5' stroke-linecap='round'/>"
 let flameOutline = "<path d='\(flamePath)' fill='none' stroke='black' stroke-width='1.5' stroke-linejoin='round'/>"
 let glyphSVG = [
     "active": "<path d='\(flamePath) M9 8.2 C9 8.2 11 10.3 11 11.6 C11 12.7 10.1 13.4 9 13.4 C7.9 13.4 7 12.7 7 11.6 C7 10.3 9 8.2 9 8.2 Z' fill='black' fill-rule='evenodd'/>" + lidLine,
     "disabled": flameOutline + lidLine,
-    "setup": flameOutline + lidLine + "<circle cx='14.6' cy='3.6' r='2.6' fill='black'/>",
 ]
 let glyphs: [String: NSImage] = glyphSVG.mapValues { body in
     let svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18' width='18' height='18'>\(body)</svg>"
@@ -137,8 +136,7 @@ let glyphs: [String: NSImage] = glyphSVG.mapValues { body in
 class App: NSObject, NSApplicationDelegate {
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     let toggle = NSMenuItem(title: "Keep awake when lid closed", action: #selector(flip), keyEquivalent: "")
-    let install = NSMenuItem(title: "Install helper (admin)…", action: #selector(installHelper), keyEquivalent: "")
-    let removeItem = NSMenuItem(title: "Remove helper…", action: #selector(removeHelper), keyEquivalent: "")
+    let uninstallItem = NSMenuItem(title: "Uninstall…", action: #selector(uninstall), keyEquivalent: "")
     let lowPowerItem = NSMenuItem(title: "Low Power Mode when lid closed", action: #selector(flipLowPower), keyEquivalent: "")
     let cutoffItem = NSMenuItem(title: "Sleep when battery below", action: nil, keyEquivalent: "")
     let lockedItem = NSMenuItem(title: "Keep awake when screen locked", action: #selector(flipLocked), keyEquivalent: "")
@@ -157,10 +155,14 @@ class App: NSObject, NSApplicationDelegate {
     var capacityWh = 0.0
 
     var armed: Bool { enabled && sessionActive && hasLid && !(screenLocked && !awakeWhenLocked) }
-    var helperOK = FileManager.default.fileExists(atPath: sudoersPath)
     let powerKey = powerModeSettings()?.key
 
     func applicationDidFinishLaunching(_ n: Notification) {
+        // Without the sudoers rule every pmset call fails silently, so on a Mac with a lid there's nothing to run.
+        if hasLid && !FileManager.default.fileExists(atPath: sudoersPath) && !installHelper() {
+            NSApp.terminate(nil)
+            return
+        }
         let menu = NSMenu()
         let cutoffs = NSMenu()
         for pct in [0, 10, 15, 20] {
@@ -169,7 +171,7 @@ class App: NSObject, NSApplicationDelegate {
             cutoffs.addItem(i)
         }
         cutoffItem.submenu = cutoffs
-        [install, toggle, lowPowerItem, lockedItem, loginItem, cutoffItem].forEach { $0.target = self; menu.addItem($0) }
+        [toggle, lowPowerItem, lockedItem, loginItem, cutoffItem].forEach { $0.target = self; menu.addItem($0) }
         menu.addItem(.separator())
         let header = NSMenuItem(title: "Average power on battery", action: nil, keyEquivalent: "")
         header.isEnabled = false
@@ -177,9 +179,9 @@ class App: NSObject, NSApplicationDelegate {
         resetStats.target = self
         menu.addItem(resetStats)
         menu.addItem(.separator())
-        removeItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
-        removeItem.target = self
-        menu.addItem(removeItem)
+        uninstallItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
+        uninstallItem.target = self
+        menu.addItem(uninstallItem)
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApp.terminate), keyEquivalent: "q"))
         item.menu = menu
 
@@ -203,7 +205,7 @@ class App: NSObject, NSApplicationDelegate {
         ws.addObserver(forName: NSWorkspace.willPowerOffNotification, object: nil, queue: .main) { _ in restore() }
 
         restorePowerMode() // in case a previous run quit or crashed with the lid closed
-        if helperOK { try? watchdog.register() }
+        if hasLid { try? watchdog.register() }
         // Polls the lid every 2 seconds. An IOKit interest notification would react faster, but polling is simpler and cheap.
         // The tolerance lets macOS coalesce this wakeup with other timers instead of waking the CPU on its own.
         Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.tick() }.tolerance = 0.5
@@ -292,15 +294,12 @@ class App: NSObject, NSApplicationDelegate {
     }
 
     func refreshUI() {
-        let helper = helperOK || !hasLid
         toggle.state = enabled && hasLid ? .on : .off
         toggle.isEnabled = hasLid
         toggle.title = hasLid ? "Keep awake when lid closed" : "This Mac has no lid, nothing to do"
-        install.isHidden = helper
-        removeItem.isHidden = !helperOK
         lowPowerItem.isHidden = powerKey == nil || !hasLid
-        item.button?.image = glyphs[!helper ? "setup" : armed ? "active" : "disabled"]
-        item.button?.setAccessibilityLabel(!helper ? "Decaffeinate: setup needed" : armed ? "Decaffeinate: on" : "Decaffeinate: off")
+        item.button?.image = glyphs[armed ? "active" : "disabled"]
+        item.button?.setAccessibilityLabel(armed ? "Decaffeinate: on" : "Decaffeinate: off")
         item.button?.toolTip = !armed ? "Lid close: sleep"
             : deskMode ? "Lid closed with an external display: normal desk use"
             : "Lid close: stay awake, low power, screen off"
@@ -344,33 +343,49 @@ class App: NSObject, NSApplicationDelegate {
         apply()
     }
 
-    @objc func installHelper() {
+    // Explains the rule before the admin prompt. False if declined or the install failed.
+    func installHelper() -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "Decaffeinate needs a one-time admin permission"
+        alert.informativeText = "It adds a sudoers rule that lets Decaffeinate run only the pmset sleep and Low Power commands, " +
+            "so it doesn't ask for your password every time the lid closes. Without it Decaffeinate can't keep your Mac awake."
+        alert.addButton(withTitle: "Install…")
+        alert.addButton(withTitle: "Quit")
+        NSApp.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn else { return false }
         let user = NSUserName()
         let rule = "\(user) ALL=(root) NOPASSWD: " + pmsetCmds.map { "/usr/bin/pmset \($0)" }.joined(separator: ", ") + "\n"
         let tmp = NSTemporaryDirectory() + "decaffeinate.sudoers"
         try? rule.write(toFile: tmp, atomically: true, encoding: .utf8)
         let sh = "/usr/sbin/visudo -cf '\(tmp)' && /usr/bin/install -m 0440 -o root -g wheel '\(tmp)' \(sudoersPath)"
         NSAppleScript(source: "do shell script \"\(sh)\" with administrator privileges")?.executeAndReturnError(nil)
-        helperOK = FileManager.default.fileExists(atPath: sudoersPath)
-        if helperOK { try? watchdog.register() }
-        apply()
+        return FileManager.default.fileExists(atPath: sudoersPath)
     }
 
-    @objc func removeHelper() {
+    // Leaves the Mac as it was before the first launch: the Bin alone would keep the sudoers rule,
+    // the watchdog and the login item registered.
+    @objc func uninstall() {
         let alert = NSAlert()
-        alert.messageText = "Remove the Decaffeinate helper?"
-        alert.informativeText = "Your Mac goes back to sleeping when the lid closes. You can install the helper again from this menu."
-        alert.addButton(withTitle: "Remove")
+        alert.messageText = "Uninstall Decaffeinate?"
+        alert.informativeText = "Your Mac goes back to sleeping when the lid closes. Decaffeinate removes its helper, " +
+            "background check, login item and settings, moves itself to the Bin and quits."
+        alert.addButton(withTitle: "Uninstall")
         alert.addButton(withTitle: "Cancel")
         alert.buttons[0].hasDestructiveAction = true
         NSApp.activate(ignoringOtherApps: true)
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         restore() // while sudo still allows it
-        let removed = NSAppleScript(source: "do shell script \"/bin/rm -f \(sudoersPath)\" with administrator privileges")?.executeAndReturnError(nil) != nil
-        guard removed else { return }
+        if FileManager.default.fileExists(atPath: sudoersPath) {
+            let removed = NSAppleScript(source: "do shell script \"/bin/rm -f \(sudoersPath)\" with administrator privileges")?.executeAndReturnError(nil) != nil
+            guard removed else { apply(); return } // admin prompt cancelled: nothing removed, re-arm
+        }
         try? watchdog.unregister()
-        helperOK = FileManager.default.fileExists(atPath: sudoersPath)
-        refreshUI()
+        try? SMAppService.mainApp.unregister()
+        if let id = Bundle.main.bundleIdentifier { UserDefaults.standard.removePersistentDomain(forName: id) }
+        if (try? FileManager.default.trashItem(at: Bundle.main.bundleURL, resultingItemURL: nil)) == nil {
+            NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL]) // no write access: let the user drag it
+        }
+        NSApp.terminate(nil)
     }
 }
 
@@ -405,7 +420,7 @@ if CommandLine.arguments.contains("--selftest") {
     precondition(batteryDraw(["ExternalConnected": false, "Voltage": 12000, "Amperage": -500, "MaxCapacity": 5000])! == (6.0, 60.0)) // Intel
     precondition(batteryDraw(["ExternalConnected": true, "Voltage": 12000, "InstantAmperage": 2000, "AppleRawMaxCapacity": 8000]) == nil)
     precondition(pmsetCmds.contains("-b lowpowermode 1") && pmsetCmds.contains("-c powermode 2"))
-    precondition(Set(glyphs.keys) == ["active", "disabled", "setup"])
+    precondition(Set(glyphs.keys) == ["active", "disabled"])
     precondition(run("/bin/echo", ["hi"]) == "hi\n")
     precondition(run("/bin/sh", ["-c", "head -c 200000 /dev/zero"]).utf8.count == 200_000) // more than a pipe buffer
     precondition(run("/nonexistent", []) == "")
