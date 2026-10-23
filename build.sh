@@ -17,6 +17,8 @@ lipo -create "$TMP/arm64" "$TMP/x86_64" -output "$APP/Contents/MacOS/Decaffeinat
 rm -rf "$TMP"
 mkdir -p "$APP/Contents/Resources"
 swift assets/render-icon.swift "$APP/Contents/Resources/AppIcon.icns"
+# MIT (sudolabs) and ISC (Lucide) both require their notice in every copy, the release .dmg included.
+cp LICENSE "$APP/Contents/Resources/"
 mkdir -p "$APP/Contents/Library/LaunchAgents"
 cp io.github.dstmrk.decaffeinate.watchdog.plist "$APP/Contents/Library/LaunchAgents/"
 cat > "$APP/Contents/Info.plist" <<EOF

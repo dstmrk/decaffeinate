@@ -44,7 +44,7 @@ jobs:
           fi
           echo "$files"
           # The app is built unless every file is one it never reads.
-          if grep -qvE '\.md$|^LICENSE$|^\.gitignore$|^\.claude/|^measure\.sh$|^site/' <<< "$files"; then app=true; else app=false; fi
+          if grep -qvE '\.md$|^\.gitignore$|^\.claude/|^measure\.sh$|^site/' <<< "$files"; then app=true; else app=false; fi
           if grep -qE '^\.claude/hooks/|\.sh$|^\.github/workflows/ci\.yml$' <<< "$files"; then hooks=true; else hooks=false; fi
           echo "app=$app" >> "$GITHUB_OUTPUT"
           echo "hooks=$hooks" >> "$GITHUB_OUTPUT"
@@ -69,6 +69,8 @@ jobs:
         run: '"$HOME/Applications/Decaffeinate.app/Contents/MacOS/Decaffeinate" --selftest'
       - name: Lint watchdog plist
         run: plutil -lint io.github.dstmrk.decaffeinate.watchdog.plist
+      - name: Check bundled LICENSE
+        run: cmp LICENSE "$HOME/Applications/Decaffeinate.app/Contents/Resources/LICENSE"
       - name: Package dmg
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         timeout-minutes: 5
