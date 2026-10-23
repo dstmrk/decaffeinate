@@ -17,7 +17,7 @@ A choice made **where the prompt, the spec or `CLAUDE.md` were silent**,
 and that the user might want to overturn. In this app, for example:
 
 - an invented threshold: polling interval, battery or heat cutoff, the
-  settling window before sampling power draw;
+  settling window after a lid change;
 - what happens to the Mac in an unplanned state (lid closed + external
   display, locked screen, crash mid-transition);
 - a new command in `pmsetCmds`, i.e. a wider sudoers rule;

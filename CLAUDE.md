@@ -81,7 +81,7 @@ check (this repo's latest GitHub release, never upstream's).
   `precondition`s in `Sources/Selftest.swift`, written
   before the implementation. Logic is extracted into pure functions
   (input → output, like `bailReason`, `powerModeSettings(_:)`,
-  `batteryDraw(_:)`) precisely so it can be tested there; I/O stays in a
+  `cutoffTitle(_:)`) precisely so it can be tested there; I/O stays in a
   thin wrapper.
 - **3 · Edge cases after every implementation:** list them and cover
   them with `precondition`s before committing. The usual suspects here:
