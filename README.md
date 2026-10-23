@@ -2,7 +2,7 @@
 
 A tiny macOS menu bar app that keeps a MacBook awake with the lid closed, so long-running jobs (AI coding agents, builds) keep working on a fraction of the power.
 
-Decaffeinate is a fork of [Pilot Light](https://github.com/CyrisXD/pilot-light) by [sudolabs](https://pilotlight.sudolabs.nz). The design, the measurements below and nearly all of the code are theirs. This fork has its own minimal page ([decaffeinate-app.pages.dev](https://decaffeinate-app.pages.dev), source in [`site/`](site)), and its update check looks for this fork's releases.
+Decaffeinate is a fork of [Pilot Light](https://github.com/CyrisXD/pilot-light) by [sudolabs](https://pilotlight.sudolabs.nz). The idea, the original design and the measurements below are theirs. This fork has since restructured the code into separate modules, fixed bugs and simplified setup for non-technical users. It has its own minimal page ([decaffeinate-app.pages.dev](https://decaffeinate-app.pages.dev), source in [`site/`](site)), and its update check looks for this fork's releases.
 
 ## What it does
 
@@ -77,4 +77,4 @@ Choose **Uninstall…** from the menu. Decaffeinate turns lid-close sleep back o
 
 ## Credits and license
 
-MIT. Original work © 2026 sudolabs ([Pilot Light](https://github.com/CyrisXD/pilot-light)); see [LICENSE](LICENSE), which the app bundle also carries in `Contents/Resources/`. The cup icon is [Lucide](https://lucide.dev)'s "coffee" (ISC). If the app is useful to you, consider [sponsoring the original author](https://github.com/sponsors/CyrisXD).
+MIT. Original work © 2026 sudolabs ([Pilot Light](https://github.com/CyrisXD/pilot-light)); see [LICENSE](LICENSE), which the app bundle also carries in `Contents/Resources/`. The cup icon is [Lucide](https://lucide.dev)'s "coffee" (ISC). If the app is useful to you, you can support this fork on [Ko-fi](https://ko-fi.com/dstmrk) or [sponsor the original author](https://github.com/sponsors/CyrisXD).

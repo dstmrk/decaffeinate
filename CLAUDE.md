@@ -7,9 +7,11 @@ agents, long builds), in Low Power Mode with the display off, and puts
 everything back when the lid opens.
 
 It is a **fork of [Pilot Light](https://github.com/CyrisXD/pilot-light)
-by sudolabs** (MIT). The design and nearly all of the code are theirs:
-every text that describes the project (README, Info.plist, the header of
-`Sources/main.swift`) says so, and `LICENSE` keeps their copyright. That stays.
+by sudolabs** (MIT). The idea and the original design are theirs; this
+fork restructured the code, fixed bugs and simplified setup. Every text
+that describes the project (README, Info.plist, the header of
+`Sources/main.swift`) credits them, and `LICENSE` keeps their copyright.
+That stays.
 
 **Stack:** Swift in `Sources/` (Cocoa, IOKit, ServiceManagement),
 all files compiled as one module with `swiftc` by `build.sh` into a universal app (arm64 +
