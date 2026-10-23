@@ -59,8 +59,7 @@ Needs the Xcode command line tools. Builds a universal app (Apple silicon and In
 
 While the app is on, the Mac also won't idle-sleep with the lid open (the display still turns off).
 
-If the app crashes or is force-quit, a small background check (installed with the helper) turns lid-close sleep back on within a minute.
-That check does not restore Low Power Mode: it stays on until you open Decaffeinate again, or turn it off yourself in System Settings › Battery.
+If the app crashes or is force-quit, a small background check (installed with the helper) turns lid-close sleep back on within a minute, and puts back your Low Power Mode settings.
 If macOS has that check switched off (System Settings › General › Login Items), Decaffeinate warns at launch and adds **Crash protection is off, fix…** to the menu.
 
 If you previously installed Pilot Light, remove its helper first (**Remove helper…** in its menu, or `sudo rm /etc/sudoers.d/pilotlight`): the two apps use separate helpers and would fight over the same `pmset` setting.

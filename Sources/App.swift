@@ -153,8 +153,8 @@ class App: NSObject, NSApplicationDelegate {
 
     // Saves the user's per-source Low Power setting (persisted, survives a crash) then turns it on everywhere.
     func lowPowerOn() {
-        guard let cur = powerModeSettings(), UserDefaults.standard.dictionary(forKey: "savedPowerMode") == nil else { return }
-        UserDefaults.standard.set(cur.values, forKey: "savedPowerMode")
+        guard let cur = powerModeSettings(), UserDefaults.standard.dictionary(forKey: savedPowerModeKey) == nil else { return }
+        UserDefaults.standard.set(cur.values, forKey: savedPowerModeKey)
         pmset("-a \(cur.key) 1")
     }
 

@@ -30,13 +30,14 @@ func installScript(rule: String, path: String) -> String {
         "/usr/sbin/visudo -cf $t && /usr/bin/install -m 0440 -o root -g wheel $t \(path); s=$?; /bin/rm -f $t; exit $s"
 }
 
-// The pmset arguments a shell command runs through `sudo -n /usr/bin/pmset`, e.g. the watchdog's.
+// The pmset arguments a shell script runs through `sudo -n /usr/bin/pmset`, e.g. the watchdog's.
+// Each command ends at the first ||, &&, ; or newline.
 func sudoPmsetArgs(in shell: String) -> [String] {
     let marker = "/usr/bin/sudo -n /usr/bin/pmset "
     var found: [String] = [], rest = Substring(shell)
     while let r = rest.range(of: marker) {
         rest = rest[r.upperBound...]
-        let end = rest.range(of: " ||")?.lowerBound ?? rest.endIndex
+        let end = [" ||", " &&", ";", "\n"].compactMap { rest.range(of: $0)?.lowerBound }.min() ?? rest.endIndex
         found.append(String(rest[..<end]).trimmingCharacters(in: .whitespaces))
         rest = rest[end...]
     }
