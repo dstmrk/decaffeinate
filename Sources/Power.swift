@@ -54,8 +54,14 @@ func powerModeSettings(_ out: String = run("/usr/bin/pmset", ["-g", "custom"])) 
     return key.map { ($0, values) }
 }
 
-// Safety cutoffs while the lid is closed. The battery limit is set from the menu (0 = off).
-var minBatteryPercent: Int { UserDefaults.standard.object(forKey: "minBattery") as? Int ?? 15 }
+// Safety cutoffs while the lid is closed. The battery limit is set from the menu (0 = never).
+let batteryCutoffs = [0, 5, 10, 15, 20, 30, 40, 50]
+let defaultMinBattery = 20
+var minBatteryPercent: Int { UserDefaults.standard.object(forKey: "minBattery") as? Int ?? defaultMinBattery }
+
+// Also names a stored value that isn't in the menu, so the menu always shows the limit in force.
+func cutoffTitle(_ pct: Int) -> String { pct <= 0 ? "Never" : "\(pct)%" }
+
 let maxThermal = ProcessInfo.ThermalState.serious
 
 // Battery percent when running on battery, nil on AC.
@@ -73,34 +79,6 @@ func bailReason(_ thermal: ProcessInfo.ThermalState, _ battery: Int?, min: Int =
     if thermal.rawValue >= maxThermal.rawValue { return "too hot" }
     if let b = battery, b < min { return "battery \(b)%" }
     return nil
-}
-
-// Watts drawn from the battery plus full-charge energy; nil on AC (charging muddies the reading) or no battery.
-func batteryDraw() -> (watts: Double, capacityWh: Double)? {
-    let s = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSmartBattery"))
-    guard s != 0 else { return nil }
-    defer { IOObjectRelease(s) }
-    var props: Unmanaged<CFMutableDictionary>?
-    guard IORegistryEntryCreateCFProperties(s, &props, kCFAllocatorDefault, 0) == KERN_SUCCESS,
-          let p = props?.takeRetainedValue() as? [String: Any] else { return nil }
-    return batteryDraw(p)
-}
-
-// Apple Silicon reports MaxCapacity as a percent and the mAh in AppleRawMaxCapacity; Intel reports mAh in MaxCapacity.
-func batteryDraw(_ p: [String: Any]) -> (watts: Double, capacityWh: Double)? {
-    guard p["ExternalConnected"] as? Bool == false,
-          let mv = p["Voltage"] as? Int,
-          let ma = (p["InstantAmperage"] ?? p["Amperage"]) as? Int, ma < 0,
-          let mah = (p["AppleRawMaxCapacity"] as? Int) ?? (p["MaxCapacity"] as? Int).flatMap({ $0 > 100 ? $0 : nil })
-    else { return nil }
-    return (Double(-ma * mv) / 1e6, Double(mah * mv) / 1e6)
-}
-
-func statLine(_ label: String, sum: Double, n: Int, capacityWh: Double) -> String {
-    guard n > 0 else { return "\(label): measuring on battery…" }
-    let w = sum / Double(n)
-    let hours = capacityWh > 0 ? String(format: " · ~%.0f h battery", capacityWh / w) : ""
-    return String(format: "%@: %.1f W%@", label, w, hours)
 }
 
 // The user's Low Power Mode per power source while the lid is closed, e.g. ["-b": 1, "-c": 0].

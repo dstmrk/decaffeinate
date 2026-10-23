@@ -11,9 +11,9 @@ When the lid closes while you're logged in, Decaffeinate:
 - keeps the Mac awake (power assertions like `caffeinate` can't survive a lid close; this uses the system sleep setting that can),
 - switches to Low Power Mode, then restores your exact battery and charger settings when the lid opens,
 - turns the display off,
-- lets the Mac sleep anyway on serious heat or when the battery drops below your limit.
+- lets the Mac sleep anyway on serious heat or when the battery drops below your limit (20% by default, set under **Settings**).
 
-It keeps working behind the lock screen. Log out or switch users, and closing the lid sleeps the Mac as normal. Turn off **Keep awake when screen locked** and it also sleeps once the screen locks. With an external display connected, a closed lid is treated as a normal desk setup and left alone. The menu shows your Mac's own measured power draw with the lid open and closed.
+It keeps working behind the lock screen. Log out or switch users, and closing the lid sleeps the Mac as normal. Turn off **Keep awake when screen locked** and it also sleeps once the screen locks. With an external display connected, a closed lid is treated as a normal desk setup and left alone.
 
 It makes no network requests unless you ask for an update check: **Check for updates…** checks once, **Check for updates daily** (off by default) checks once a day. Each is one anonymous request for this repository's latest GitHub release; nothing about your Mac is sent. A newer version appears at the top of the menu and opens the release page; Decaffeinate never downloads or installs anything by itself.
 
@@ -66,7 +66,7 @@ If you previously installed Pilot Light, remove its helper first (**Remove helpe
 
 ## Uninstall
 
-Choose **Uninstall…** from the menu. Decaffeinate turns lid-close sleep back on, removes the helper, the background check, the login item and its settings, moves itself to the Bin and quits. Dragging the app to the Bin instead leaves the helper behind; remove it by hand with `sudo pmset -a disablesleep 0 && sudo rm /etc/sudoers.d/decaffeinate`. Turn sleep back on first: once the rule is gone, neither the app nor the watchdog can.
+Choose **Settings › Uninstall…** from the menu. Decaffeinate turns lid-close sleep back on, removes the helper, the background check, the login item and its settings, moves itself to the Bin and quits. Dragging the app to the Bin instead leaves the helper behind; remove it by hand with `sudo pmset -a disablesleep 0 && sudo rm /etc/sudoers.d/decaffeinate`. Turn sleep back on first: once the rule is gone, neither the app nor the watchdog can.
 
 ## Development
 

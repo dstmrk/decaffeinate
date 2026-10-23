@@ -10,15 +10,17 @@ func selftest() -> Never {
     precondition(bailReason(.nominal, 14, min: 15) == "battery 14%")
     precondition(bailReason(.nominal, 15, min: 15) == nil)
     precondition(bailReason(.nominal, 1, min: 0) == nil)
-    precondition(statLine("Lid open", sum: 0, n: 0, capacityWh: 100) == "Lid open: measuring on battery…")
-    precondition(statLine("Lid closed", sum: 48, n: 10, capacityWh: 96) == "Lid closed: 4.8 W · ~20 h battery")
+    precondition(bailReason(.nominal, 19, min: 20) == "battery 19%" && bailReason(.nominal, 20, min: 20) == nil)
+    precondition(bailReason(.nominal, 0, min: 0) == nil && bailReason(.nominal, 0, min: -5) == nil) // "Never" can't trigger
+    // The cutoff menu: ascending, "Never" first, and the default is one of the choices.
+    precondition(batteryCutoffs == [0, 5, 10, 15, 20, 30, 40, 50] && batteryCutoffs == batteryCutoffs.sorted())
+    precondition(batteryCutoffs.contains(defaultMinBattery) && defaultMinBattery == 20)
+    precondition(cutoffTitle(0) == "Never" && cutoffTitle(20) == "20%" && cutoffTitle(50) == "50%")
+    precondition(cutoffTitle(12) == "12%" && cutoffTitle(-5) == "Never") // a hand-edited value outside the list still reads true
     let custom = "Battery Power:\n lowpowermode         1\nAC Power:\n lowpowermode         0\n"
     precondition(powerModeSettings(custom)! == ("lowpowermode", ["-b": 1, "-c": 0]))
     precondition(powerModeSettings("AC Power:\n powermode 2\n")! == ("powermode", ["-c": 2]))
     precondition(powerModeSettings("AC Power:\n sleep 1\n") == nil)
-    precondition(batteryDraw(["ExternalConnected": false, "Voltage": 12000, "InstantAmperage": -1000, "AppleRawMaxCapacity": 8000, "MaxCapacity": 100])! == (12.0, 96.0))
-    precondition(batteryDraw(["ExternalConnected": false, "Voltage": 12000, "Amperage": -500, "MaxCapacity": 5000])! == (6.0, 60.0)) // Intel
-    precondition(batteryDraw(["ExternalConnected": true, "Voltage": 12000, "InstantAmperage": 2000, "AppleRawMaxCapacity": 8000]) == nil)
     precondition(pmsetCmds.contains("-b lowpowermode 1") && pmsetCmds.contains("-c powermode 2"))
     // isArmed: any one of these ends the stay-awake, so each must flip the result on its own.
     precondition(isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: false, awakeWhenLocked: false))
@@ -89,6 +91,6 @@ func selftest() -> Never {
     precondition(run("/nonexistent", []) == "")
     print("Self-test passed.")
     print("This Mac: lid \(hasLid ? "yes" : "no"), external display \(externalDisplayActive() ? "yes" : "no"), power setting \(powerModeSettings()?.key ?? "none"), " +
-          "battery \(batteryPercent().map { "\($0)%" } ?? "on AC"), draw \(batteryDraw().map { String(format: "%.1f W", $0.watts) } ?? "n/a on AC")")
+          "battery \(batteryPercent().map { "\($0)%" } ?? "on AC")")
     exit(0)
 }
