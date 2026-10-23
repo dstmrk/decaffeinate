@@ -60,10 +60,17 @@ class App: NSObject, NSApplicationDelegate {
         }
         cutoffItem.submenu = cutoffs
         updateItem.image = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil)
-        [watchdogItem, updateItem, toggle, lowPowerItem, lockedItem, loginItem, dailyUpdatesItem, cutoffItem].forEach { $0.target = self; menu.addItem($0) }
-        menu.addItem(.separator())
         uninstallItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
-        [checkUpdatesItem, uninstallItem].forEach { $0.target = self; menu.addItem($0) }
+        // What changes the stay-awake or alerts about it stays on the first level; set-and-forget options go one level down.
+        let settings = NSMenu()
+        [lowPowerItem, lockedItem, cutoffItem, loginItem, dailyUpdatesItem].forEach { $0.target = self; settings.addItem($0) }
+        settings.addItem(.separator())
+        [checkUpdatesItem, uninstallItem].forEach { $0.target = self; settings.addItem($0) }
+        let settingsItem = NSMenuItem(title: "Settings", action: nil, keyEquivalent: "")
+        settingsItem.submenu = settings
+        [watchdogItem, updateItem, toggle].forEach { $0.target = self; menu.addItem($0) }
+        menu.addItem(settingsItem)
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApp.terminate), keyEquivalent: "q"))
         item.menu = menu
 
