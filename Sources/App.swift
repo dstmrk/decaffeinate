@@ -328,10 +328,11 @@ class App: NSObject, NSApplicationDelegate {
         installing = true
         defer { installing = false }
         let alert = NSAlert()
-        alert.messageText = "Decaffeinate needs a one-time admin permission"
-        alert.informativeText = "It adds a sudoers rule that lets Decaffeinate run only the pmset sleep and Low Power commands, " +
-            "so it doesn't ask for your password every time the lid closes. Without it Decaffeinate can't keep your Mac awake."
-        alert.addButton(withTitle: "Install…")
+        alert.messageText = "Decaffeinate needs your permission, once"
+        alert.informativeText = "To keep your Mac awake with the lid closed, Decaffeinate needs to change a few power settings. " +
+            "macOS will ask for your password to allow this, and then never again.\n\n" +
+            "It can only change sleep and Low Power Mode settings, nothing else on your Mac."
+        alert.addButton(withTitle: "Continue…")
         alert.addButton(withTitle: "Quit")
         NSApp.activate(ignoringOtherApps: true)
         guard alert.runModal() == .alertFirstButtonReturn else { return false }

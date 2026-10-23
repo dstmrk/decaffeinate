@@ -28,7 +28,18 @@ It makes no network requests unless you ask for an update check: **Check for upd
 
 ## Install
 
-Download `Decaffeinate-<version>.dmg` from the [latest release](https://github.com/dstmrk/decaffeinate/releases/latest) and drag the app to Applications. It is ad-hoc signed, not notarized: the first time you open it, go to **System Settings › Privacy & Security** and click **Open Anyway**.
+Download `Decaffeinate-<version>.dmg` from the [latest release](https://github.com/dstmrk/decaffeinate/releases/latest) and drag the app to Applications.
+
+### Opening Decaffeinate for the first time
+
+macOS will block Decaffeinate the first time, saying *"Apple cannot check it for malicious software"*. This is expected: Decaffeinate is free and open source, and isn't signed with a paid Apple developer account (it is ad-hoc signed, not notarized). It's safe to open:
+
+1. Double-click Decaffeinate. When macOS blocks it, click **Done** (not *Move to Bin*).
+2. Open **System Settings › Privacy & Security** and scroll down to the **Security** section.
+3. Click **Open Anyway** next to "Decaffeinate was blocked", then enter your password.
+4. You only need to do this once.
+
+If you prefer the Terminal: `xattr -dr com.apple.quarantine /Applications/Decaffeinate.app`.
 
 ## Build from source
 
@@ -43,7 +54,7 @@ Needs the Xcode command line tools. Builds a universal app (Apple silicon and In
 
 ## First launch
 
-1. On first launch, click **Install…**. This one admin prompt adds a sudoers rule that allows only `pmset` sleep and Low Power changes. Decaffeinate can't work without it, so declining quits the app.
+1. On first launch, click **Continue…**. The admin prompt that follows adds a sudoers rule that allows only `pmset` sleep and Low Power changes. Decaffeinate can't work without it, so declining quits the app.
 2. Close the lid.
 
 While the app is on, the Mac also won't idle-sleep with the lid open (the display still turns off).
