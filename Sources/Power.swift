@@ -75,34 +75,6 @@ func bailReason(_ thermal: ProcessInfo.ThermalState, _ battery: Int?, min: Int =
     return nil
 }
 
-// Watts drawn from the battery plus full-charge energy; nil on AC (charging muddies the reading) or no battery.
-func batteryDraw() -> (watts: Double, capacityWh: Double)? {
-    let s = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSmartBattery"))
-    guard s != 0 else { return nil }
-    defer { IOObjectRelease(s) }
-    var props: Unmanaged<CFMutableDictionary>?
-    guard IORegistryEntryCreateCFProperties(s, &props, kCFAllocatorDefault, 0) == KERN_SUCCESS,
-          let p = props?.takeRetainedValue() as? [String: Any] else { return nil }
-    return batteryDraw(p)
-}
-
-// Apple Silicon reports MaxCapacity as a percent and the mAh in AppleRawMaxCapacity; Intel reports mAh in MaxCapacity.
-func batteryDraw(_ p: [String: Any]) -> (watts: Double, capacityWh: Double)? {
-    guard p["ExternalConnected"] as? Bool == false,
-          let mv = p["Voltage"] as? Int,
-          let ma = (p["InstantAmperage"] ?? p["Amperage"]) as? Int, ma < 0,
-          let mah = (p["AppleRawMaxCapacity"] as? Int) ?? (p["MaxCapacity"] as? Int).flatMap({ $0 > 100 ? $0 : nil })
-    else { return nil }
-    return (Double(-ma * mv) / 1e6, Double(mah * mv) / 1e6)
-}
-
-func statLine(_ label: String, sum: Double, n: Int, capacityWh: Double) -> String {
-    guard n > 0 else { return "\(label): measuring on battery…" }
-    let w = sum / Double(n)
-    let hours = capacityWh > 0 ? String(format: " · ~%.0f h battery", capacityWh / w) : ""
-    return String(format: "%@: %.1f W%@", label, w, hours)
-}
-
 // The user's Low Power Mode per power source while the lid is closed, e.g. ["-b": 1, "-c": 0].
 // The watchdog reads it by this name to restore it after a crash.
 let savedPowerModeKey = "savedPowerMode"

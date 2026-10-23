@@ -43,11 +43,7 @@ class App: NSObject, NSApplicationDelegate {
     var wasClosed = false
     var bailed = false // slept for safety; stays asleep until lid opens
     var deskMode = false // lid closed with an external display in use
-    let openStat = NSMenuItem(), closedStat = NSMenuItem()
-    let resetStats = NSMenuItem(title: "Reset power averages", action: #selector(reset), keyEquivalent: "")
     var installing = false
-    var lastChange = Date(), lastSample = Date.distantPast
-    var capacityWh = 0.0
 
     var armed: Bool { isArmed(enabled: enabled, sessionActive: sessionActive, hasLid: hasLid, screenLocked: screenLocked, awakeWhenLocked: awakeWhenLocked) }
     let powerKey = powerModeSettings()?.key
@@ -65,12 +61,6 @@ class App: NSObject, NSApplicationDelegate {
         cutoffItem.submenu = cutoffs
         updateItem.image = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil)
         [watchdogItem, updateItem, toggle, lowPowerItem, lockedItem, loginItem, dailyUpdatesItem, cutoffItem].forEach { $0.target = self; menu.addItem($0) }
-        menu.addItem(.separator())
-        let header = NSMenuItem(title: "Average power on battery", action: nil, keyEquivalent: "")
-        header.isEnabled = false
-        [header, openStat, closedStat].forEach { menu.addItem($0) }
-        resetStats.target = self
-        menu.addItem(resetStats)
         menu.addItem(.separator())
         uninstallItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
         [checkUpdatesItem, uninstallItem].forEach { $0.target = self; menu.addItem($0) }
@@ -164,7 +154,6 @@ class App: NSObject, NSApplicationDelegate {
         if closed != wasClosed || desk != deskMode {
             wasClosed = closed
             deskMode = desk
-            lastChange = Date()
             if armed && closed && !desk {
                 if lowPower { lowPowerOn() }
                 run("/usr/bin/pmset", ["displaysleepnow"])
@@ -183,40 +172,6 @@ class App: NSObject, NSApplicationDelegate {
             pmset("-a disablesleep 0")
             run("/usr/bin/pmset", ["sleepnow"])
         }
-        if Date().timeIntervalSince(lastSample) >= 30 { sample() }
-    }
-
-    // Running mean per lid state, persisted so it builds up over days.
-    // Skips the first minute after a lid change (display/power mode still settling)
-    // and lid-closed time when Decaffeinate isn't holding the Mac awake.
-    func sample() {
-        lastSample = Date()
-        guard Date().timeIntervalSince(lastChange) > 60, !wasClosed || (armed && !bailed && !deskMode),
-              let b = batteryDraw() else { return }
-        capacityWh = b.capacityWh
-        let key = wasClosed ? "closed" : "open", d = UserDefaults.standard
-        d.set(d.double(forKey: key + "Sum") + b.watts, forKey: key + "Sum")
-        d.set(d.integer(forKey: key + "N") + 1, forKey: key + "N")
-        refreshStats()
-    }
-
-    func refreshStats() {
-        let d = UserDefaults.standard
-        openStat.title = statLine("Lid open", sum: d.double(forKey: "openSum"), n: d.integer(forKey: "openN"), capacityWh: capacityWh)
-        closedStat.title = statLine("Lid closed", sum: d.double(forKey: "closedSum"), n: d.integer(forKey: "closedN"), capacityWh: capacityWh)
-    }
-
-    @objc func reset() {
-        let alert = NSAlert()
-        alert.messageText = "Reset power averages?"
-        alert.informativeText = "Lid-open and lid-closed averages start over from zero."
-        alert.addButton(withTitle: "Reset")
-        alert.addButton(withTitle: "Cancel")
-        alert.buttons[0].hasDestructiveAction = true
-        NSApp.activate(ignoringOtherApps: true) // menu bar apps aren't frontmost; without this the alert opens behind other windows
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        ["openSum", "openN", "closedSum", "closedN"].forEach(UserDefaults.standard.removeObject)
-        refreshStats()
     }
 
     func refreshUI() {
@@ -238,7 +193,6 @@ class App: NSObject, NSApplicationDelegate {
         dailyUpdatesItem.state = dailyUpdates ? .on : .off
         updateItem.isHidden = latestVersion == nil
         updateItem.title = "Download Decaffeinate \(latestVersion ?? "")"
-        refreshStats()
     }
 
     func checkDaily() {

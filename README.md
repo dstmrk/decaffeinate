@@ -13,7 +13,7 @@ When the lid closes while you're logged in, Decaffeinate:
 - turns the display off,
 - lets the Mac sleep anyway on serious heat or when the battery drops below your limit.
 
-It keeps working behind the lock screen. Log out or switch users, and closing the lid sleeps the Mac as normal. Turn off **Keep awake when screen locked** and it also sleeps once the screen locks. With an external display connected, a closed lid is treated as a normal desk setup and left alone. The menu shows your Mac's own measured power draw with the lid open and closed.
+It keeps working behind the lock screen. Log out or switch users, and closing the lid sleeps the Mac as normal. Turn off **Keep awake when screen locked** and it also sleeps once the screen locks. With an external display connected, a closed lid is treated as a normal desk setup and left alone.
 
 It makes no network requests unless you ask for an update check: **Check for updates…** checks once, **Check for updates daily** (off by default) checks once a day. Each is one anonymous request for this repository's latest GitHub release; nothing about your Mac is sent. A newer version appears at the top of the menu and opens the release page; Decaffeinate never downloads or installs anything by itself.
 
