@@ -36,6 +36,8 @@ func selftest() -> Never {
     precondition(sudoPmsetArgs(in: "a || b || /usr/bin/sudo -n /usr/bin/pmset -a disablesleep 0") == ["-a disablesleep 0"])
     precondition(sudoPmsetArgs(in: "/usr/bin/sudo -n /usr/bin/pmset -a x 1 || /usr/bin/sudo -n /usr/bin/pmset -b y 2") == ["-a x 1", "-b y 2"])
     precondition(sudoPmsetArgs(in: "/usr/bin/pmset -g").isEmpty)
+    precondition(sudoPmsetArgs(in: "x && /usr/bin/sudo -n /usr/bin/pmset -a y 0\nz; /usr/bin/sudo -n /usr/bin/pmset $f $k $v; w") == ["-a y 0", "$f $k $v"])
+    precondition(sudoPmsetArgs(in: "/usr/bin/sudo -n /usr/bin/pmset -a y 0 && z") == ["-a y 0"])
     // installScript runs as root inside an AppleScript string: the file is made by root, validated, then installed,
     // and the script needs no quote or backslash escaping.
     let script = installScript(rule: bobRule, path: "/etc/sudoers.d/x")
@@ -49,8 +51,14 @@ func selftest() -> Never {
     let agents = Bundle.main.bundlePath + "/Contents/Library/LaunchAgents/"
     let wd = NSDictionary(contentsOfFile: agents + "io.github.dstmrk.decaffeinate.watchdog.plist")
     let wdShell = (wd?["ProgramArguments"] as? [String])?.last ?? ""
-    precondition(!sudoPmsetArgs(in: wdShell).isEmpty, "watchdog plist missing from the bundle or runs no sudo pmset")
-    precondition(sudoPmsetArgs(in: wdShell).allSatisfy { pmsetCmds.contains($0) })
+    precondition(sudoPmsetArgs(in: wdShell) == ["-a disablesleep 0", "$f $k $v"],
+                 "watchdog plist missing from the bundle, or its sudo pmset commands changed")
+    // $f $k $v: each power source the app saves, either Low Power Mode name, any level pmset reports.
+    let wdPowerCmds = ["-b", "-c"].flatMap { f in ["powermode", "lowpowermode"].flatMap { k in (0...2).map { "\(f) \(k) \($0)" } } }
+    precondition((["-a disablesleep 0"] + wdPowerCmds).allSatisfy { pmsetCmds.contains($0) })
+    // ...and it restores what lowPowerOn() saved: same defaults domain, same key, the -b/-c flags powerModeSettings uses.
+    precondition(wdShell.contains("d=\(Bundle.main.bundleIdentifier ?? "missing");") && wdShell.contains("\(savedPowerModeKey).$f"))
+    precondition(wdShell.contains("for f in -b -c;") && Set(powerModeSettings(custom)!.values.keys) == ["-b", "-c"])
     // The watchdog is the crash safety net: off (declined, disabled in Login Items, failed to register) must be visible.
     precondition(!watchdogNeedsAttention(hasLid: true, status: .enabled))
     precondition(watchdogNeedsAttention(hasLid: true, status: .requiresApproval))

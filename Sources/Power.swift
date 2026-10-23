@@ -103,12 +103,16 @@ func statLine(_ label: String, sum: Double, n: Int, capacityWh: Double) -> Strin
     return String(format: "%@: %.1f W%@", label, w, hours)
 }
 
+// The user's Low Power Mode per power source while the lid is closed, e.g. ["-b": 1, "-c": 0].
+// The watchdog reads it by this name to restore it after a crash.
+let savedPowerModeKey = "savedPowerMode"
+
 // Puts back exactly what lowPowerOn() saved, per power source.
 func restorePowerMode() {
-    guard let saved = UserDefaults.standard.dictionary(forKey: "savedPowerMode") as? [String: Int],
+    guard let saved = UserDefaults.standard.dictionary(forKey: savedPowerModeKey) as? [String: Int],
           let key = powerModeSettings()?.key else { return }
     saved.forEach { pmset("\($0.key) \(key) \($0.value)") }
-    UserDefaults.standard.removeObject(forKey: "savedPowerMode")
+    UserDefaults.standard.removeObject(forKey: savedPowerModeKey)
 }
 
 func restore() {
