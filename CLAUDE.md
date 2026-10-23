@@ -34,6 +34,10 @@ check (this repo's latest GitHub release, never upstream's).
 - `io.github.dstmrk.decaffeinate.watchdog.plist` — LaunchAgent that
   turns lid-close sleep back on if the app isn't running
 - `measure.sh` — measures power draw from battery telemetry (`logs/`)
+- `site/` — the project page, one `index.html` (inline CSS, no JS, no
+  external requests), deployed by Cloudflare Pages from this directory; the
+  cup in it repeats the paths of `assets/AppIcon.svg`, so an icon change
+  updates both
 - `assets/` — app icon: `AppIcon.svg` is the only source;
   `render-icon.swift` turns it into the bundle's `.icns` during `build.sh`;
   `dmg-settings.py` and `render-dmg-background.swift` lay out the release

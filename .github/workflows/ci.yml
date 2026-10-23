@@ -44,7 +44,7 @@ jobs:
           fi
           echo "$files"
           # The app is built unless every file is one it never reads.
-          if grep -qvE '\.md$|^LICENSE$|^\.gitignore$|^\.claude/|^measure\.sh$' <<< "$files"; then app=true; else app=false; fi
+          if grep -qvE '\.md$|^LICENSE$|^\.gitignore$|^\.claude/|^measure\.sh$|^site/' <<< "$files"; then app=true; else app=false; fi
           if grep -qE '^\.claude/hooks/|\.sh$|^\.github/workflows/ci\.yml$' <<< "$files"; then hooks=true; else hooks=false; fi
           echo "app=$app" >> "$GITHUB_OUTPUT"
           echo "hooks=$hooks" >> "$GITHUB_OUTPUT"

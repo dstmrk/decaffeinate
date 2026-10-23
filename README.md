@@ -2,7 +2,7 @@
 
 A tiny macOS menu bar app that keeps a MacBook awake with the lid closed, so long-running jobs (AI coding agents, builds) keep working on a fraction of the power.
 
-Decaffeinate is a fork of [Pilot Light](https://github.com/CyrisXD/pilot-light) by [sudolabs](https://pilotlight.sudolabs.nz). The design, the measurements below and nearly all of the code are theirs. This fork drops the website and the support links, and its update check looks for this fork's releases.
+Decaffeinate is a fork of [Pilot Light](https://github.com/CyrisXD/pilot-light) by [sudolabs](https://pilotlight.sudolabs.nz). The design, the measurements below and nearly all of the code are theirs. This fork has its own minimal page ([decaffeinate-app.pages.dev](https://decaffeinate-app.pages.dev), source in [`site/`](site)), and its update check looks for this fork's releases.
 
 ## What it does
 
