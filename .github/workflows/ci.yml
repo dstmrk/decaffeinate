@@ -4,7 +4,9 @@
 # Pull requests and pushes to main run only the jobs their files can affect
 # (the changes job decides); a tag runs all of them.
 # A v* tag runs the same checks, then attaches Decaffeinate-1.0.0.dmg to the
-# GitHub Release v1.0.0. The tag can come from git (git tag v1.0.0 && git push
+# GitHub Release v1.0.0, plus a copy named Decaffeinate.dmg: the project page links
+# to releases/latest/download/Decaffeinate.dmg, which needs a name that never
+# changes. The tag can come from git (git tag v1.0.0 && git push
 # origin v1.0.0), which creates the release, or from a release published on
 # GitHub, which creates the tag and keeps its own title and notes.
 # Run manually (Actions > CI > Run workflow), it builds Decaffeinate-dev.dmg as
@@ -119,8 +121,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          cp Decaffeinate-*.dmg Decaffeinate.dmg
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" Decaffeinate-*.dmg --repo "$GITHUB_REPOSITORY" --clobber
+            gh release upload "$GITHUB_REF_NAME" Decaffeinate-*.dmg Decaffeinate.dmg --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$GITHUB_REF_NAME" Decaffeinate-*.dmg --repo "$GITHUB_REPOSITORY" --generate-notes
+            gh release create "$GITHUB_REF_NAME" Decaffeinate-*.dmg Decaffeinate.dmg --repo "$GITHUB_REPOSITORY" --generate-notes
           fi
