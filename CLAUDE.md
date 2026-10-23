@@ -29,7 +29,8 @@ check (this repo's latest GitHub release, never upstream's).
   - `App.swift` — menu bar glyphs and the `App` delegate (menu, lid
     state machine, alerts)
   - `Selftest.swift` — every `precondition`, run by `--selftest`
-- `build.sh` — build + `Info.plist` (version from the `VERSION` env var, else
+- `build.sh` — build + `Info.plist` + `LICENSE` copied into the
+  bundle's `Resources/` (version from the `VERSION` env var, else
   the latest git tag, else `0.0.0`; CI sets it from a release tag)
 - `io.github.dstmrk.decaffeinate.watchdog.plist` — LaunchAgent that
   turns lid-close sleep back on if the app isn't running
@@ -118,8 +119,8 @@ check (this repo's latest GitHub release, never upstream's).
 Cloud sessions run on **Linux, where the app doesn't compile**
 (AppKit/IOKit don't exist). The gate is CI on a macOS runner: universal
 build, `lipo -verify_arch`, `--selftest`, `plutil -lint` of the
-watchdog. If you couldn't compile, **say so in the PR** instead of
-writing "tested".
+watchdog, `cmp` of the bundled `LICENSE`. If you couldn't compile,
+**say so in the PR** instead of writing "tested".
 
 On Linux, with the Swift toolchain from swift.org unpacked in the
 scratchpad: `swiftc -parse Sources/*.swift` catches syntax errors, and
