@@ -54,8 +54,14 @@ func powerModeSettings(_ out: String = run("/usr/bin/pmset", ["-g", "custom"])) 
     return key.map { ($0, values) }
 }
 
-// Safety cutoffs while the lid is closed. The battery limit is set from the menu (0 = off).
-var minBatteryPercent: Int { UserDefaults.standard.object(forKey: "minBattery") as? Int ?? 15 }
+// Safety cutoffs while the lid is closed. The battery limit is set from the menu (0 = never).
+let batteryCutoffs = [0, 5, 10, 15, 20, 30, 40, 50]
+let defaultMinBattery = 20
+var minBatteryPercent: Int { UserDefaults.standard.object(forKey: "minBattery") as? Int ?? defaultMinBattery }
+
+// Also names a stored value that isn't in the menu, so the menu always shows the limit in force.
+func cutoffTitle(_ pct: Int) -> String { pct <= 0 ? "Never" : "\(pct)%" }
+
 let maxThermal = ProcessInfo.ThermalState.serious
 
 // Battery percent when running on battery, nil on AC.

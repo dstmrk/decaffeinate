@@ -10,6 +10,13 @@ func selftest() -> Never {
     precondition(bailReason(.nominal, 14, min: 15) == "battery 14%")
     precondition(bailReason(.nominal, 15, min: 15) == nil)
     precondition(bailReason(.nominal, 1, min: 0) == nil)
+    precondition(bailReason(.nominal, 19, min: 20) == "battery 19%" && bailReason(.nominal, 20, min: 20) == nil)
+    precondition(bailReason(.nominal, 0, min: 0) == nil && bailReason(.nominal, 0, min: -5) == nil) // "Never" can't trigger
+    // The cutoff menu: ascending, "Never" first, and the default is one of the choices.
+    precondition(batteryCutoffs == [0, 5, 10, 15, 20, 30, 40, 50] && batteryCutoffs == batteryCutoffs.sorted())
+    precondition(batteryCutoffs.contains(defaultMinBattery) && defaultMinBattery == 20)
+    precondition(cutoffTitle(0) == "Never" && cutoffTitle(20) == "20%" && cutoffTitle(50) == "50%")
+    precondition(cutoffTitle(12) == "12%" && cutoffTitle(-5) == "Never") // a hand-edited value outside the list still reads true
     let custom = "Battery Power:\n lowpowermode         1\nAC Power:\n lowpowermode         0\n"
     precondition(powerModeSettings(custom)! == ("lowpowermode", ["-b": 1, "-c": 0]))
     precondition(powerModeSettings("AC Power:\n powermode 2\n")! == ("powermode", ["-c": 2]))

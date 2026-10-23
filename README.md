@@ -11,7 +11,7 @@ When the lid closes while you're logged in, Decaffeinate:
 - keeps the Mac awake (power assertions like `caffeinate` can't survive a lid close; this uses the system sleep setting that can),
 - switches to Low Power Mode, then restores your exact battery and charger settings when the lid opens,
 - turns the display off,
-- lets the Mac sleep anyway on serious heat or when the battery drops below your limit.
+- lets the Mac sleep anyway on serious heat or when the battery drops below your limit (20% by default, set under **Settings**).
 
 It keeps working behind the lock screen. Log out or switch users, and closing the lid sleeps the Mac as normal. Turn off **Keep awake when screen locked** and it also sleeps once the screen locks. With an external display connected, a closed lid is treated as a normal desk setup and left alone.
 

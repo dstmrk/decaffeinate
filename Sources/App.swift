@@ -53,8 +53,8 @@ class App: NSObject, NSApplicationDelegate {
         if !ensureHelper() { return }
         let menu = NSMenu()
         let cutoffs = NSMenu()
-        for pct in [0, 10, 15, 20] {
-            let i = NSMenuItem(title: pct == 0 ? "Off" : "\(pct)%", action: #selector(setCutoff), keyEquivalent: "")
+        for pct in batteryCutoffs {
+            let i = NSMenuItem(title: cutoffTitle(pct), action: #selector(setCutoff), keyEquivalent: "")
             i.tag = pct; i.target = self
             cutoffs.addItem(i)
         }
@@ -194,6 +194,7 @@ class App: NSObject, NSApplicationDelegate {
         lowPowerItem.state = lowPower ? .on : .off
         lockedItem.state = awakeWhenLocked ? .on : .off
         lockedItem.isHidden = !hasLid
+        cutoffItem.title = "Sleep when battery below: \(cutoffTitle(minBatteryPercent))"
         cutoffItem.submenu?.items.forEach { $0.state = $0.tag == minBatteryPercent ? .on : .off }
         watchdogItem.isHidden = !watchdogNeedsAttention(hasLid: hasLid, status: watchdog.status)
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
