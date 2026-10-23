@@ -35,7 +35,9 @@ check (this repo's latest GitHub release, never upstream's).
   turns lid-close sleep back on if the app isn't running
 - `measure.sh` — measures power draw from battery telemetry (`logs/`)
 - `assets/` — app icon: `AppIcon.svg` is the only source;
-  `render-icon.swift` turns it into the bundle's `.icns` during `build.sh`
+  `render-icon.swift` turns it into the bundle's `.icns` during `build.sh`;
+  `dmg-settings.py` and `render-dmg-background.swift` lay out the release
+  `.dmg` window (CI only; the two must agree on size and icon positions)
 - `.github/workflows/ci.yml` — macOS build + selftest, hook tests, each
   only when the changed files can affect it; on a `v*` tag, all of them,
   then the `.dmg` and the GitHub Release
