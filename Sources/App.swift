@@ -1,4 +1,6 @@
 import Cocoa
+import IOKit
+import IOKit.ps
 import ServiceManagement
 
 // Menu bar template glyphs: Lucide "coffee" (ISC, see LICENSE) on its 24-unit grid, drawn at 18 pt so the
@@ -97,14 +99,14 @@ class App: NSObject, NSApplicationDelegate {
         if hasLid {
             do { try watchdog.register() } catch { NSLog("Decaffeinate: watchdog registration failed: \(error)") }
         }
-        // Polls the lid every 2 seconds. An IOKit interest notification would react faster, but polling is simpler and cheap.
-        // The tolerance lets macOS coalesce this wakeup with other timers instead of waking the CPU on its own.
-        Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.tick() }.tolerance = 0.5
+        // No timer: the app sleeps until something reevaluate() reads changes. Without a lid nothing can.
+        if hasLid { observeLidAndCutoffs() }
         // Hourly, so a day that passes during sleep or a failed check is caught up within the hour.
         // The first one waits a little: at login the network is often not up yet.
         Timer.scheduledTimer(withTimeInterval: 60 * 60, repeats: true) { [weak self] _ in self?.checkDaily() }.tolerance = 10 * 60
         DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in self?.checkDaily() }
         apply()
+        reevaluate()
         warnIfWatchdogOff()
     }
 
@@ -155,7 +157,32 @@ class App: NSObject, NSApplicationDelegate {
         pmset("-a \(cur.key) 1")
     }
 
-    func tick() {
+    // Each input of reevaluate() as an event: the lid (root domain messages), an external display coming or going,
+    // battery level and power source, heat, and waking from sleep (the lid can open while the Mac sleeps).
+    // Events in between that change nothing cost one IOKit read.
+    func observeLidAndCutoffs() {
+        let me = Unmanaged.passUnretained(self).toOpaque() // the delegate lives as long as the app
+        let port = IONotificationPortCreate(kIOMainPortDefault)
+        CFRunLoopAddSource(CFRunLoopGetMain(), IONotificationPortGetRunLoopSource(port).takeUnretainedValue(), .defaultMode)
+        var notifier: io_object_t = 0
+        // Every root domain message, not just the clamshell one: they are rare and reevaluate() ignores the rest.
+        IOServiceAddInterestNotification(port, rootDomain, kIOGeneralInterest, { ctx, _, _, _ in
+            Unmanaged<App>.fromOpaque(ctx!).takeUnretainedValue().reevaluate()
+        }, me, &notifier)
+        if let battery = IOPSNotificationCreateRunLoopSource({ ctx in
+            Unmanaged<App>.fromOpaque(ctx!).takeUnretainedValue().reevaluate()
+        }, me)?.takeRetainedValue() {
+            CFRunLoopAddSource(CFRunLoopGetMain(), battery, .defaultMode)
+        }
+        for name in [NSApplication.didChangeScreenParametersNotification, ProcessInfo.thermalStateDidChangeNotification] {
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.reevaluate() }
+        }
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) {
+            [weak self] _ in self?.reevaluate()
+        }
+    }
+
+    func reevaluate() {
         let closed = lidClosed() ?? false
         let desk = closed && externalDisplayActive()
         if closed != wasClosed || desk != deskMode {

@@ -85,6 +85,8 @@ func selftest() -> Never {
     precondition(!updateCheckDue(last: t0, now: t0 + day - 1) && updateCheckDue(last: t0, now: t0 + day))
     precondition(updateCheckDue(last: t0, now: t0 - 1)) // clock set back past the last check
     precondition(releasesAPI.absoluteString == "https://api.github.com/repos/dstmrk/decaffeinate/releases/latest") // this fork, not upstream
+    // Lid state and lid events both go through this one lookup; if it failed, every Mac would look lid-less.
+    precondition(rootDomain != 0, "IOPMrootDomain not found")
     precondition(Set(glyphs.keys) == ["active", "disabled"])
     precondition(run("/bin/echo", ["hi"]) == "hi\n")
     precondition(run("/bin/sh", ["-c", "head -c 200000 /dev/zero"]).utf8.count == 200_000) // more than a pipe buffer

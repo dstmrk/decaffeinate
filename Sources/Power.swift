@@ -18,11 +18,12 @@ func run(_ path: String, _ args: [String]) -> String {
 // Only the exact commands whitelisted in sudoers; -n never prompts.
 func pmset(_ cmd: String) { run("/usr/bin/sudo", ["-n", "/usr/bin/pmset"] + cmd.split(separator: " ").map(String.init)) }
 
+// The power management root: it holds the lid state and posts its changes. Looked up once, kept for the app's lifetime.
+let rootDomain = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
+
 // nil on Macs without a lid (Mac mini, iMac, Studio, Pro).
 func lidClosed() -> Bool? {
-    let root = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
-    defer { IOObjectRelease(root) }
-    return IORegistryEntryCreateCFProperty(root, "AppleClamshellState" as CFString, kCFAllocatorDefault, 0)?
+    IORegistryEntryCreateCFProperty(rootDomain, "AppleClamshellState" as CFString, kCFAllocatorDefault, 0)?
         .takeRetainedValue() as? Bool
 }
 let hasLid = lidClosed() != nil
