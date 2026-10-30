@@ -4,8 +4,10 @@ import ServiceManagement
 // `Decaffeinate --selftest`: the pure logic, checked on any Mac (CI runs it on every pull request).
 func selftest() -> Never {
     precondition(bailReason(.nominal, nil) == nil)
-    precondition(bailReason(.fair, 50) == "too hot" && bailReason(.fair, nil) == "too hot") // closed: the first warm level
-    precondition(bailReason(.serious, nil) == "too hot")
+    precondition(bailReason(.fair, 50) == "too hot" && bailReason(.fair, 100) == "too hot") // on battery: the first warm level
+    precondition(bailReason(.fair, nil) == nil && bailReason(.serious, nil) == "too hot") // on power: once macOS throttles
+    precondition(maxThermal(onBattery: true) == .fair && maxThermal(onBattery: false) == .serious)
+    precondition(bailReason(.fair, 10, min: 20) == "too hot") // both on battery: heat is named first
     precondition(bailReason(.critical, 80) == "too hot")
     precondition(bailReason(.nominal, 14, min: 15) == "battery 14%")
     precondition(bailReason(.nominal, 15, min: 15) == nil)

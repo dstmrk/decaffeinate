@@ -64,8 +64,10 @@ var minBatteryPercent: Int { UserDefaults.standard.object(forKey: "minBattery") 
 // Also names a stored value that isn't in the menu, so the menu always shows the limit in force.
 func cutoffTitle(_ pct: Int) -> String { pct <= 0 ? "Never" : "\(pct)%" }
 
-// The first level above normal: a closed MacBook (in a bag, on a sofa) can't shed heat the way an open one does.
-let maxThermal = ProcessInfo.ThermalState.fair
+// On battery a closed MacBook is most likely in a bag, where it can't shed heat: the first level above normal.
+// On power it's most likely on a desk running a long build: only once macOS starts slowing it down.
+// A USB-C power bank counts as power, so a Mac charging from one in a bag gets the second.
+func maxThermal(onBattery: Bool) -> ProcessInfo.ThermalState { onBattery ? .fair : .serious }
 
 // Battery percent when running on battery, nil on AC.
 func batteryPercent() -> Int? {
@@ -79,7 +81,7 @@ func batteryPercent() -> Int? {
 }
 
 func bailReason(_ thermal: ProcessInfo.ThermalState, _ battery: Int?, min: Int = minBatteryPercent) -> String? {
-    if thermal.rawValue >= maxThermal.rawValue { return "too hot" }
+    if thermal.rawValue >= maxThermal(onBattery: battery != nil).rawValue { return "too hot" }
     if let b = battery, b < min { return "battery \(b)%" }
     return nil
 }
