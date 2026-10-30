@@ -12,21 +12,11 @@ func selftest() -> Never {
     precondition(bailReason(.nominal, 1, min: 0) == nil)
     precondition(bailReason(.nominal, 19, min: 20) == "battery 19%" && bailReason(.nominal, 20, min: 20) == nil)
     precondition(bailReason(.nominal, 0, min: 0) == nil && bailReason(.nominal, 0, min: -5) == nil) // "Never" can't trigger
-    // Time limit: reached at exactly N hours, never with "Never", on AC as on battery.
-    let hour = 3600.0
-    precondition(bailReason(.nominal, nil, closedFor: 4 * hour - 1, maxHours: 4) == nil)
-    precondition(bailReason(.nominal, nil, closedFor: 4 * hour, maxHours: 4) == "lid closed 4 h")
-    precondition(bailReason(.nominal, 80, min: 20, closedFor: 25 * hour, maxHours: 24) == "lid closed 24 h")
-    precondition(bailReason(.nominal, nil, closedFor: 1000 * hour, maxHours: 0) == nil && bailReason(.nominal, nil, closedFor: hour, maxHours: -1) == nil)
-    precondition(bailReason(.nominal, nil, closedFor: 0, maxHours: 1) == nil) // just closed
-    precondition(bailReason(.fair, 10, min: 20, closedFor: 9 * hour, maxHours: 8) == "too hot") // heat named first
-    precondition(closedHourLimits.first == 0 && closedHourLimits == closedHourLimits.sorted() && Set(closedHourLimits).count == closedHourLimits.count)
     // The cutoff menu: ascending, "Never" first, and the default is one of the choices.
     precondition(batteryCutoffs == [0, 5, 10, 15, 20, 30, 40, 50] && batteryCutoffs == batteryCutoffs.sorted())
     precondition(batteryCutoffs.contains(defaultMinBattery) && defaultMinBattery == 20)
-    precondition(cutoffTitle(0, "%") == "Never" && cutoffTitle(20, "%") == "20%" && cutoffTitle(50, "%") == "50%")
-    precondition(cutoffTitle(12, "%") == "12%" && cutoffTitle(-5, "%") == "Never") // a hand-edited value outside the list still reads true
-    precondition(cutoffTitle(0, " h") == "Never" && cutoffTitle(8, " h") == "8 h")
+    precondition(cutoffTitle(0) == "Never" && cutoffTitle(20) == "20%" && cutoffTitle(50) == "50%")
+    precondition(cutoffTitle(12) == "12%" && cutoffTitle(-5) == "Never") // a hand-edited value outside the list still reads true
     let custom = "Battery Power:\n lowpowermode         1\nAC Power:\n lowpowermode         0\n"
     precondition(powerModeSettings(custom)! == ("lowpowermode", ["-b": 1, "-c": 0]))
     precondition(powerModeSettings("AC Power:\n powermode 2\n")! == ("powermode", ["-c": 2]))
