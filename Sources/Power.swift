@@ -29,8 +29,9 @@ func lidClosed() -> Bool? {
 let hasLid = lidClosed() != nil
 
 // Whether Decaffeinate should hold the Mac awake right now. Every false here must lead to `disablesleep 0`.
-func isArmed(enabled: Bool, sessionActive: Bool, hasLid: Bool, screenLocked: Bool, awakeWhenLocked: Bool) -> Bool {
-    enabled && sessionActive && hasLid && !(screenLocked && !awakeWhenLocked)
+// sentToSleep: Decaffeinate put the Mac to sleep (a safety cutoff, or Sleep now) and it hasn't come back yet.
+func isArmed(enabled: Bool, sessionActive: Bool, hasLid: Bool, screenLocked: Bool, awakeWhenLocked: Bool, sentToSleep: Bool) -> Bool {
+    enabled && sessionActive && hasLid && !(screenLocked && !awakeWhenLocked) && !sentToSleep
 }
 
 // True when an external display is in use. With the lid closed that's a normal desk setup
@@ -63,7 +64,10 @@ var minBatteryPercent: Int { UserDefaults.standard.object(forKey: "minBattery") 
 // Also names a stored value that isn't in the menu, so the menu always shows the limit in force.
 func cutoffTitle(_ pct: Int) -> String { pct <= 0 ? "Never" : "\(pct)%" }
 
-let maxThermal = ProcessInfo.ThermalState.serious
+// On battery a closed MacBook is most likely in a bag, where it can't shed heat: the first level above normal.
+// On power it's most likely on a desk running a long build: only once macOS starts slowing it down.
+// A USB-C power bank counts as power, so a Mac charging from one in a bag gets the second.
+func maxThermal(onBattery: Bool) -> ProcessInfo.ThermalState { onBattery ? .fair : .serious }
 
 // Battery percent when running on battery, nil on AC.
 func batteryPercent() -> Int? {
@@ -77,7 +81,7 @@ func batteryPercent() -> Int? {
 }
 
 func bailReason(_ thermal: ProcessInfo.ThermalState, _ battery: Int?, min: Int = minBatteryPercent) -> String? {
-    if thermal.rawValue >= maxThermal.rawValue { return "too hot" }
+    if thermal.rawValue >= maxThermal(onBattery: battery != nil).rawValue { return "too hot" }
     if let b = battery, b < min { return "battery \(b)%" }
     return nil
 }
@@ -85,6 +89,10 @@ func bailReason(_ thermal: ProcessInfo.ThermalState, _ battery: Int?, min: Int =
 // The user's Low Power Mode per power source while the lid is closed, e.g. ["-b": 1, "-c": 0].
 // The watchdog reads it by this name to restore it after a crash.
 let savedPowerModeKey = "savedPowerMode"
+
+// Set while Decaffeinate holds the Mac awake with the lid closed and no external display. The watchdog reads it
+// by this name: if the app died meanwhile (or quit), nothing else would put the closed Mac to sleep.
+let heldClosedKey = "heldClosed"
 
 // Puts back exactly what lowPowerOn() saved, per power source.
 func restorePowerMode() {

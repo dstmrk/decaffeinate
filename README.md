@@ -11,7 +11,7 @@ When the lid closes while you're logged in, Decaffeinate:
 - keeps the Mac awake (power assertions like `caffeinate` can't survive a lid close; this uses the system sleep setting that can),
 - switches to Low Power Mode, then restores your exact battery and charger settings when the lid opens,
 - turns the display off,
-- lets the Mac sleep anyway on serious heat or when the battery drops below your limit (20% by default, set under **Settings**).
+- lets the Mac sleep anyway when it gets hot: on battery as soon as it runs warm, since a closed MacBook in a bag can't cool down; on power only once macOS starts slowing it down, so long builds on a desk can finish. It also sleeps when the battery drops below your limit (20% by default, set under **Settings**).
 
 It keeps working behind the lock screen. Log out or switch users, and closing the lid sleeps the Mac as normal. Turn off **Keep awake when screen locked** and it also sleeps once the screen locks. With an external display connected, a closed lid is treated as a normal desk setup and left alone.
 
@@ -57,9 +57,9 @@ Needs the Xcode command line tools. Builds a universal app (Apple silicon and In
 1. On first launch, click **Continue…**. The admin prompt that follows adds a sudoers rule that allows only `pmset` sleep and Low Power changes. Decaffeinate can't work without it, so declining quits the app.
 2. Close the lid.
 
-While the app is on, the Mac also won't idle-sleep with the lid open (the display still turns off).
+While the app is on, the Mac also won't idle-sleep with the lid open (the display still turns off), and Apple menu › Sleep does nothing: use **Sleep now** in Decaffeinate's menu.
 
-If the app crashes or is force-quit, a small background check (installed with the helper) turns lid-close sleep back on within a minute, and puts back your Low Power Mode settings.
+If the app crashes or is force-quit, a small background check (installed with the helper) turns lid-close sleep back on within a minute, puts the Mac to sleep if its lid is still closed, and puts back your Low Power Mode settings.
 If macOS has that check switched off (System Settings › General › Login Items), Decaffeinate warns at launch and adds **Crash protection is off, fix…** to the menu.
 
 If you previously installed Pilot Light, remove its helper first (**Remove helper…** in its menu, or `sudo rm /etc/sudoers.d/pilotlight`): the two apps use separate helpers and would fight over the same `pmset` setting.
