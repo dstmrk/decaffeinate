@@ -4,7 +4,7 @@ import ServiceManagement
 // `Decaffeinate --selftest`: the pure logic, checked on any Mac (CI runs it on every pull request).
 func selftest() -> Never {
     precondition(bailReason(.nominal, nil) == nil)
-    precondition(bailReason(.fair, 50) == nil)
+    precondition(bailReason(.fair, 50) == "too hot" && bailReason(.fair, nil) == "too hot") // closed: the first warm level
     precondition(bailReason(.serious, nil) == "too hot")
     precondition(bailReason(.critical, 80) == "too hot")
     precondition(bailReason(.nominal, 14, min: 15) == "battery 14%")
@@ -12,23 +12,36 @@ func selftest() -> Never {
     precondition(bailReason(.nominal, 1, min: 0) == nil)
     precondition(bailReason(.nominal, 19, min: 20) == "battery 19%" && bailReason(.nominal, 20, min: 20) == nil)
     precondition(bailReason(.nominal, 0, min: 0) == nil && bailReason(.nominal, 0, min: -5) == nil) // "Never" can't trigger
+    // Time limit: reached at exactly N hours, never with "Never", on AC as on battery.
+    let hour = 3600.0
+    precondition(bailReason(.nominal, nil, closedFor: 4 * hour - 1, maxHours: 4) == nil)
+    precondition(bailReason(.nominal, nil, closedFor: 4 * hour, maxHours: 4) == "lid closed 4 h")
+    precondition(bailReason(.nominal, 80, min: 20, closedFor: 25 * hour, maxHours: 24) == "lid closed 24 h")
+    precondition(bailReason(.nominal, nil, closedFor: 1000 * hour, maxHours: 0) == nil && bailReason(.nominal, nil, closedFor: hour, maxHours: -1) == nil)
+    precondition(bailReason(.nominal, nil, closedFor: 0, maxHours: 1) == nil) // just closed
+    precondition(bailReason(.fair, 10, min: 20, closedFor: 9 * hour, maxHours: 8) == "too hot") // heat named first
+    precondition(closedHourLimits.first == 0 && closedHourLimits == closedHourLimits.sorted() && Set(closedHourLimits).count == closedHourLimits.count)
     // The cutoff menu: ascending, "Never" first, and the default is one of the choices.
     precondition(batteryCutoffs == [0, 5, 10, 15, 20, 30, 40, 50] && batteryCutoffs == batteryCutoffs.sorted())
     precondition(batteryCutoffs.contains(defaultMinBattery) && defaultMinBattery == 20)
-    precondition(cutoffTitle(0) == "Never" && cutoffTitle(20) == "20%" && cutoffTitle(50) == "50%")
-    precondition(cutoffTitle(12) == "12%" && cutoffTitle(-5) == "Never") // a hand-edited value outside the list still reads true
+    precondition(cutoffTitle(0, "%") == "Never" && cutoffTitle(20, "%") == "20%" && cutoffTitle(50, "%") == "50%")
+    precondition(cutoffTitle(12, "%") == "12%" && cutoffTitle(-5, "%") == "Never") // a hand-edited value outside the list still reads true
+    precondition(cutoffTitle(0, " h") == "Never" && cutoffTitle(8, " h") == "8 h")
     let custom = "Battery Power:\n lowpowermode         1\nAC Power:\n lowpowermode         0\n"
     precondition(powerModeSettings(custom)! == ("lowpowermode", ["-b": 1, "-c": 0]))
     precondition(powerModeSettings("AC Power:\n powermode 2\n")! == ("powermode", ["-c": 2]))
     precondition(powerModeSettings("AC Power:\n sleep 1\n") == nil)
     precondition(pmsetCmds.contains("-b lowpowermode 1") && pmsetCmds.contains("-c powermode 2"))
     // isArmed: any one of these ends the stay-awake, so each must flip the result on its own.
-    precondition(isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: false, awakeWhenLocked: false))
-    precondition(isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: true, awakeWhenLocked: true))
-    precondition(!isArmed(enabled: false, sessionActive: true, hasLid: true, screenLocked: false, awakeWhenLocked: true))
-    precondition(!isArmed(enabled: true, sessionActive: false, hasLid: true, screenLocked: false, awakeWhenLocked: true)) // fast user switch
-    precondition(!isArmed(enabled: true, sessionActive: true, hasLid: false, screenLocked: false, awakeWhenLocked: true)) // Mac mini, iMac
-    precondition(!isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: true, awakeWhenLocked: false))
+    precondition(isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: false, awakeWhenLocked: false, sentToSleep: false))
+    precondition(isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: true, awakeWhenLocked: true, sentToSleep: false))
+    precondition(!isArmed(enabled: false, sessionActive: true, hasLid: true, screenLocked: false, awakeWhenLocked: true, sentToSleep: false))
+    precondition(!isArmed(enabled: true, sessionActive: false, hasLid: true, screenLocked: false, awakeWhenLocked: true, sentToSleep: false)) // fast user switch
+    precondition(!isArmed(enabled: true, sessionActive: true, hasLid: false, screenLocked: false, awakeWhenLocked: true, sentToSleep: false)) // Mac mini, iMac
+    precondition(!isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: true, awakeWhenLocked: false, sentToSleep: false))
+    // A cutoff or Sleep now: the screen locking on the way down (awakeWhenLocked on) must not re-arm it.
+    precondition(!isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: true, awakeWhenLocked: true, sentToSleep: true))
+    precondition(!isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: false, awakeWhenLocked: true, sentToSleep: true))
     // sudoersRule: one line, only whitelisted pmset commands, no wildcard.
     let bobRule = sudoersRule(user: "bob")
     precondition(bobRule.hasPrefix("bob ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 0, ") && bobRule.hasSuffix("\n"))
@@ -59,8 +72,14 @@ func selftest() -> Never {
     let wdPowerCmds = ["-b", "-c"].flatMap { f in ["powermode", "lowpowermode"].flatMap { k in (0...2).map { "\(f) \(k) \($0)" } } }
     precondition((["-a disablesleep 0"] + wdPowerCmds).allSatisfy { pmsetCmds.contains($0) })
     // ...and it restores what lowPowerOn() saved: same defaults domain, same key, the -b/-c flags powerModeSettings uses.
-    precondition(wdShell.contains("d=\(Bundle.main.bundleIdentifier ?? "missing");") && wdShell.contains("\(savedPowerModeKey).$f"))
+    precondition(wdShell.contains("d=\(Bundle.main.bundleIdentifier ?? "missing")\n") && wdShell.contains("\(savedPowerModeKey).$f"))
     precondition(wdShell.contains("for f in -b -c;") && Set(powerModeSettings(custom)!.values.keys) == ["-b", "-c"])
+    // ...and a closed Mac the app was holding goes to sleep: after sleep is back on, before the early exit of
+    // the Low Power restore, only if the lid is still shut. sleepnow needs no sudo, so no new sudoers entry.
+    let wdSleep = "/usr/bin/defaults read $d \(heldClosedKey) > /dev/null 2>&1 && /usr/bin/defaults delete $d \(heldClosedKey) && " +
+        "/usr/sbin/ioreg -r -k AppleClamshellState -d 1 | /usr/bin/grep -q '\"AppleClamshellState\" = Yes' && /usr/bin/pmset sleepnow\n"
+    let wdOrder = ["-a disablesleep 0", wdSleep, "savedPowerMode > /dev/null 2>&1 || exit 0"].map { wdShell.range(of: $0)?.lowerBound }
+    precondition(!wdOrder.contains(nil) && wdOrder.map { $0! } == wdOrder.map { $0! }.sorted(), "watchdog: sleep step missing or out of order")
     // The watchdog is the crash safety net: off (declined, disabled in Login Items, failed to register) must be visible.
     precondition(!watchdogNeedsAttention(hasLid: true, status: .enabled))
     precondition(watchdogNeedsAttention(hasLid: true, status: .requiresApproval))

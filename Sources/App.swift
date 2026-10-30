@@ -29,6 +29,9 @@ class App: NSObject, NSApplicationDelegate {
     let uninstallItem = NSMenuItem(title: "Uninstall…", action: #selector(uninstall), keyEquivalent: "")
     let lowPowerItem = NSMenuItem(title: "Low Power Mode when lid closed", action: #selector(flipLowPower), keyEquivalent: "")
     let cutoffItem = NSMenuItem(title: "Sleep when battery below", action: nil, keyEquivalent: "")
+    let closedLimitItem = NSMenuItem(title: "Sleep after lid closed for", action: nil, keyEquivalent: "")
+    // While armed, disablesleep 1 makes Apple menu › Sleep do nothing.
+    let sleepItem = NSMenuItem(title: "Sleep now", action: #selector(sleepNow), keyEquivalent: "")
     let lockedItem = NSMenuItem(title: "Keep awake when screen locked", action: #selector(flipLocked), keyEquivalent: "")
     let loginItem = NSMenuItem(title: "Launch at login", action: #selector(flipLogin), keyEquivalent: "")
     let watchdogItem = NSMenuItem(title: "Crash protection is off, fix…", action: #selector(openLoginItems), keyEquivalent: "")
@@ -43,34 +46,34 @@ class App: NSObject, NSApplicationDelegate {
     var awakeWhenLocked: Bool { UserDefaults.standard.object(forKey: "awakeWhenLocked") as? Bool ?? true }
     var screenLocked = false
     var wasClosed = false
-    var bailed = false // slept for safety; stays asleep until lid opens
+    var sentToSleep = false // see isArmed; ends when the Mac is back out of a bag (lid open or desk setup)
     var deskMode = false // lid closed with an external display in use
+    var closedAt: Date? // start of the current lid-closed hold
+    var closedLimitTimer: Timer?
     var installing = false
 
-    var armed: Bool { isArmed(enabled: enabled, sessionActive: sessionActive, hasLid: hasLid, screenLocked: screenLocked, awakeWhenLocked: awakeWhenLocked) }
+    var armed: Bool {
+        isArmed(enabled: enabled, sessionActive: sessionActive, hasLid: hasLid, screenLocked: screenLocked,
+                awakeWhenLocked: awakeWhenLocked, sentToSleep: sentToSleep)
+    }
     let powerKey = powerModeSettings()?.key
 
     func applicationDidFinishLaunching(_ n: Notification) {
         // Without the sudoers rule every pmset call fails silently, so on a Mac with a lid there's nothing to run.
         if !ensureHelper() { return }
         let menu = NSMenu()
-        let cutoffs = NSMenu()
-        for pct in batteryCutoffs {
-            let i = NSMenuItem(title: cutoffTitle(pct), action: #selector(setCutoff), keyEquivalent: "")
-            i.tag = pct; i.target = self
-            cutoffs.addItem(i)
-        }
-        cutoffItem.submenu = cutoffs
+        cutoffItem.submenu = choices(batteryCutoffs, "%", #selector(setCutoff))
+        closedLimitItem.submenu = choices(closedHourLimits, " h", #selector(setClosedLimit))
         updateItem.image = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil)
         uninstallItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
         // What changes the stay-awake or alerts about it stays on the first level; set-and-forget options go one level down.
         let settings = NSMenu()
-        [lowPowerItem, lockedItem, cutoffItem, loginItem, dailyUpdatesItem].forEach { $0.target = self; settings.addItem($0) }
+        [lowPowerItem, lockedItem, cutoffItem, closedLimitItem, loginItem, dailyUpdatesItem].forEach { $0.target = self; settings.addItem($0) }
         settings.addItem(.separator())
         [checkUpdatesItem, uninstallItem].forEach { $0.target = self; settings.addItem($0) }
         let settingsItem = NSMenuItem(title: "Settings", action: nil, keyEquivalent: "")
         settingsItem.submenu = settings
-        [watchdogItem, updateItem, toggle].forEach { $0.target = self; menu.addItem($0) }
+        [watchdogItem, updateItem, toggle, sleepItem].forEach { $0.target = self; menu.addItem($0) }
         menu.addItem(settingsItem)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApp.terminate), keyEquivalent: "q"))
@@ -96,6 +99,7 @@ class App: NSObject, NSApplicationDelegate {
         ws.addObserver(forName: NSWorkspace.willPowerOffNotification, object: nil, queue: .main) { _ in restore() }
 
         restorePowerMode() // in case a previous run quit or crashed with the lid closed
+        UserDefaults.standard.removeObject(forKey: heldClosedKey) // likewise; syncHold() writes it again if it still holds
         if hasLid {
             do { try watchdog.register() } catch { NSLog("Decaffeinate: watchdog registration failed: \(error)") }
         }
@@ -138,16 +142,59 @@ class App: NSObject, NSApplicationDelegate {
 
     @objc func openLoginItems() { SMAppService.openSystemSettingsLoginItems() }
 
+    // A submenu of limits, each item tagged with its value; 0 reads "Never".
+    func choices(_ values: [Int], _ unit: String, _ action: Selector) -> NSMenu {
+        let m = NSMenu()
+        for v in values {
+            let i = NSMenuItem(title: cutoffTitle(v, unit), action: action, keyEquivalent: "")
+            i.tag = v; i.target = self
+            m.addItem(i)
+        }
+        return m
+    }
+
     func apply() {
         if installing || !ensureHelper() { return }
-        bailed = false
         // disablesleep has to be set before the lid closes (lid close sleeps instantly),
         // so while armed it also stops idle sleep with the lid open. Display sleep is unaffected.
         pmset(armed ? "-a disablesleep 1" : "-a disablesleep 0")
         if !armed { restorePowerMode() }
         // Turning sleep back on while the lid is already shut doesn't sleep the Mac by itself.
-        if !armed && wasClosed && !deskMode { run("/usr/bin/pmset", ["sleepnow"]) }
+        // Repeated while sentToSleep, so an event during the sleep (the screen locking) can't re-arm it.
+        if !armed && (sentToSleep || wasClosed && !deskMode) { run("/usr/bin/pmset", ["sleepnow"]) }
+        syncHold()
         refreshUI()
+    }
+
+    // Safety cutoffs and Sleep now. Stays asleep until the Mac is out of a bag again: a wake with the lid
+    // still shut and no external display (a key press, the power button) only sleeps it again.
+    func sendToSleep() {
+        sentToSleep = true
+        apply()
+    }
+
+    @objc func sleepNow() { sendToSleep() }
+
+    // Keeps the hold's start time, its time limit and the watchdog's flag in step with what the Mac is doing.
+    func syncHold() {
+        let held = armed && wasClosed && !deskMode
+        guard held != (closedAt != nil) else { return }
+        closedAt = held ? Date() : nil
+        if held { UserDefaults.standard.set(true, forKey: heldClosedKey) } else { UserDefaults.standard.removeObject(forKey: heldClosedKey) }
+        scheduleClosedLimit()
+    }
+
+    // One timer per hold, so the limit needs no polling; reevaluate() decides when it fires.
+    func scheduleClosedLimit() {
+        closedLimitTimer?.invalidate()
+        closedLimitTimer = nil
+        guard let closedAt, maxClosedHours > 0 else { return }
+        let t = Timer(fire: closedAt + TimeInterval(maxClosedHours * 3600), interval: 0, repeats: false) { [weak self] _ in
+            self?.reevaluate()
+        }
+        t.tolerance = 60
+        RunLoop.main.add(t, forMode: .common)
+        closedLimitTimer = t
     }
 
     // Saves the user's per-source Low Power setting (persisted, survives a crash) then turns it on everywhere.
@@ -178,7 +225,17 @@ class App: NSObject, NSApplicationDelegate {
             NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.reevaluate() }
         }
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) {
-            [weak self] _ in self?.reevaluate()
+            [weak self] _ in
+            guard let self else { return }
+            self.reevaluate()
+            // A wake after sendToSleep(). Lid open: back to normal. Lid closed: an external display can take a few
+            // seconds to come back, so wait; then a desk setup goes back to normal and a Mac still in a bag to sleep.
+            guard self.sentToSleep else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + (lidClosed() == true ? 15 : 0)) { [weak self] in
+                guard let self, self.sentToSleep else { return }
+                if !(lidClosed() == true && !externalDisplayActive()) { self.sentToSleep = false }
+                self.apply()
+            }
         }
     }
 
@@ -188,6 +245,7 @@ class App: NSObject, NSApplicationDelegate {
         if closed != wasClosed || desk != deskMode {
             wasClosed = closed
             deskMode = desk
+            if !closed || desk { sentToSleep = false } // see sendToSleep()
             if armed && closed && !desk {
                 if lowPower { lowPowerOn() }
                 run("/usr/bin/pmset", ["displaysleepnow"])
@@ -196,15 +254,15 @@ class App: NSObject, NSApplicationDelegate {
                 restorePowerMode()
                 apply() // also re-arms after a safety sleep
             }
+            syncHold()
             refreshUI()
         }
-        // Safety cutoff: lid closed and too hot or battery low → let it sleep. Not in a desk setup,
-        // where someone is using the Mac on an external display.
-        if armed && closed && !desk && !bailed, let why = bailReason(ProcessInfo.processInfo.thermalState, batteryPercent()) {
+        // Safety cutoff: lid closed and too hot, battery low or closed too long → let it sleep. Not in a desk
+        // setup, where someone is using the Mac on an external display.
+        if armed && closed && !desk, let why = bailReason(ProcessInfo.processInfo.thermalState, batteryPercent(),
+                                                          closedFor: closedAt.map { Date().timeIntervalSince($0) } ?? 0) {
             NSLog("Decaffeinate: sleeping, \(why)")
-            bailed = true
-            pmset("-a disablesleep 0")
-            run("/usr/bin/pmset", ["sleepnow"])
+            sendToSleep()
         }
     }
 
@@ -221,8 +279,11 @@ class App: NSObject, NSApplicationDelegate {
         lowPowerItem.state = lowPower ? .on : .off
         lockedItem.state = awakeWhenLocked ? .on : .off
         lockedItem.isHidden = !hasLid
-        cutoffItem.title = "Sleep when battery below: \(cutoffTitle(minBatteryPercent))"
+        cutoffItem.title = "Sleep when battery below: \(cutoffTitle(minBatteryPercent, "%"))"
         cutoffItem.submenu?.items.forEach { $0.state = $0.tag == minBatteryPercent ? .on : .off }
+        closedLimitItem.title = "Sleep after lid closed for: \(cutoffTitle(maxClosedHours, " h"))"
+        closedLimitItem.submenu?.items.forEach { $0.state = $0.tag == maxClosedHours ? .on : .off }
+        sleepItem.isHidden = !armed
         watchdogItem.isHidden = !watchdogNeedsAttention(hasLid: hasLid, status: watchdog.status)
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         dailyUpdatesItem.state = dailyUpdates ? .on : .off
@@ -294,6 +355,12 @@ class App: NSObject, NSApplicationDelegate {
         refreshUI()
     }
 
+    @objc func setClosedLimit(_ sender: NSMenuItem) {
+        UserDefaults.standard.set(sender.tag, forKey: "maxClosedHours")
+        scheduleClosedLimit()
+        refreshUI()
+    }
+
     @objc func flipLogin() {
         let svc = SMAppService.mainApp
         do {
@@ -307,6 +374,7 @@ class App: NSObject, NSApplicationDelegate {
 
     @objc func flip() {
         enabled.toggle()
+        sentToSleep = false // a way out if a Sleep now never slept
         UserDefaults.standard.set(enabled, forKey: "enabled")
         apply()
     }
