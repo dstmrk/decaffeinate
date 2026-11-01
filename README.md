@@ -15,7 +15,7 @@ When the lid closes while you're logged in, Decaffeinate:
 
 It keeps working behind the lock screen. Log out or switch users, and closing the lid sleeps the Mac as normal. Turn off **Keep awake when screen locked** and it also sleeps once the screen locks. With an external display connected, a closed lid is treated as a normal desk setup and left alone.
 
-It makes no network requests unless you ask for an update check: **Check for updates…** checks once, **Check for updates daily** (off by default) checks once a day. Each is one anonymous request for this repository's latest GitHub release; nothing about your Mac is sent. A newer version appears at the top of the menu and opens the release page; Decaffeinate never downloads or installs anything by itself.
+It makes no network requests unless you ask for an update check: **Check for updates…** checks once, **Check for updates daily** (off by default) checks once a day. Each is one anonymous request for this repository's latest GitHub release; nothing about your Mac is sent. A newer version appears at the top of the menu as **Install Decaffeinate x.y.z**: one click downloads it from the GitHub release, replaces the app in place and reopens it, with no trip through System Settings. Decaffeinate never downloads or installs anything unless you click. If it can't replace itself (it runs from the dmg, or you can't write to its folder), it offers the release page instead.
 
 | | Measured upstream¹ |
 |---|---|
@@ -71,7 +71,7 @@ Choose **Settings › Uninstall…** from the menu. Decaffeinate turns lid-close
 ## Development
 
 - `Decaffeinate --selftest` (the binary inside the app bundle) checks the core logic; CI runs it on a macOS runner with the universal build on every pull request that touches the app.
-- Releases: `git tag v1.0.0 && git push origin v1.0.0`, or publish a release with a new `v1.0.0` tag on GitHub. CI runs every check, then attaches `Decaffeinate-1.0.0.dmg` and a copy named `Decaffeinate.dmg` to the release, creating it if the tag came from git. The page's download button links to the copy (`releases/latest/download/Decaffeinate.dmg`), so its name must not change.
+- Releases: `git tag v1.0.0 && git push origin v1.0.0`, or publish a release with a new `v1.0.0` tag on GitHub. CI runs every check, then attaches `Decaffeinate-1.0.0.dmg` and a copy named `Decaffeinate.dmg` to the release, creating it if the tag came from git, plus `Decaffeinate.zip`, the app that the menu's **Install** downloads (`releases/download/<tag>/Decaffeinate.zip`): that name must not change either. The page's download button links to the copy (`releases/latest/download/Decaffeinate.dmg`), so its name must not change.
 - `./measure.sh closed-batt 10` logs whole-Mac power from battery telemetry, to reproduce the numbers above.
 - The app icon is `assets/AppIcon.svg`; `build.sh` renders it into the bundle's `.icns` on every build. The release `.dmg` window (icons, arrow, volume icon) is laid out by `assets/dmg-settings.py` with [dmgbuild](https://github.com/dmgbuild/dmgbuild) in CI.
 

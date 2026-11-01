@@ -96,6 +96,14 @@ func selftest() -> Never {
     precondition(!updateCheckDue(last: t0, now: t0 + day - 1) && updateCheckDue(last: t0, now: t0 + day))
     precondition(updateCheckDue(last: t0, now: t0 - 1)) // clock set back past the last check
     precondition(releasesAPI.absoluteString == "https://api.github.com/repos/dstmrk/decaffeinate/releases/latest") // this fork, not upstream
+    // Install: the zip CI attaches to the offered tag, and only this app at that version is put in place.
+    precondition(updateZipURL("1.2.0").absoluteString == "https://github.com/dstmrk/decaffeinate/releases/download/v1.2.0/Decaffeinate.zip")
+    let infoOK: [String: Any] = ["CFBundleIdentifier": "io.github.dstmrk.decaffeinate", "CFBundleShortVersionString": "1.2.0"]
+    precondition(isOfferedUpdate(infoOK, version: "1.2.0"))
+    precondition(!isOfferedUpdate(infoOK, version: "1.2.1") && !isOfferedUpdate(nil, version: "1.2.0")) // another release, no Info.plist
+    precondition(!isOfferedUpdate(["CFBundleIdentifier": "nz.sudolabs.pilotlight", "CFBundleShortVersionString": "1.2.0"], version: "1.2.0"))
+    precondition(!isOfferedUpdate(["CFBundleIdentifier": "io.github.dstmrk.decaffeinate", "CFBundleShortVersionString": 1.2], version: "1.2"))
+    precondition(!isOfferedUpdate(["CFBundleIdentifier": "io.github.dstmrk.decaffeinate"], version: "1.2.0")) // no version
     // Lid state and lid events both go through this one lookup; if it failed, every Mac would look lid-less.
     precondition(rootDomain != 0, "IOPMrootDomain not found")
     precondition(Set(glyphs.keys) == ["active", "disabled"])

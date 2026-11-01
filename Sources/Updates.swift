@@ -46,3 +46,61 @@ func fetchLatestTag(_ done: @escaping (String?) -> Void) {
         DispatchQueue.main.async { done(tag) }
     }.resume()
 }
+
+// One-click install. CI attaches the app to every release as a zip made by ditto, which keeps the code signature.
+// Release tags always start with "v" (ci.yml releases only v* tags); newerVersion() leaves only digits and dots.
+let updateBundleID = "io.github.dstmrk.decaffeinate"
+func updateZipURL(_ version: String) -> URL {
+    URL(string: "https://github.com/dstmrk/decaffeinate/releases/download/v\(version)/Decaffeinate.zip")!
+}
+
+// The unpacked app is the one that was offered: this app, at that version. Anything else is refused.
+func isOfferedUpdate(_ info: [String: Any]?, version: String) -> Bool {
+    info?["CFBundleIdentifier"] as? String == updateBundleID && info?["CFBundleShortVersionString"] as? String == version
+}
+
+func succeeds(_ path: String, _ args: [String]) -> Bool {
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: path)
+    p.arguments = args
+    p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
+    guard (try? p.run()) != nil else { return false }
+    p.waitUntilExit()
+    return p.terminationStatus == 0
+}
+
+// Downloads the offered release and unpacks it on the same volume as `app`, so the swap is a rename. The new app's
+// URL, or nil on any failure.
+func downloadUpdate(_ version: String, beside app: URL, _ done: @escaping (URL?) -> Void) {
+    var req = URLRequest(url: updateZipURL(version), timeoutInterval: 60)
+    req.setValue("Decaffeinate/\(appVersion)", forHTTPHeaderField: "User-Agent")
+    URLSession.shared.downloadTask(with: req) { zip, resp, _ in
+        let new = (resp as? HTTPURLResponse)?.statusCode == 200 ? zip.flatMap { unpackUpdate($0, version, beside: app) } : nil
+        DispatchQueue.main.async { done(new) }
+    }.resume()
+}
+
+// The app's own download carries no quarantine flag and ditto --noqtn adds none, so Gatekeeper doesn't stop the
+// relaunch: the trust is the same as downloading the dmg by hand, an HTTPS download from this repo's releases.
+// codesign catches a truncated or altered bundle. Runs while URLSession still holds the zip.
+func unpackUpdate(_ zip: URL, _ version: String, beside app: URL) -> URL? {
+    let fm = FileManager.default
+    guard let dir = try? fm.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: app, create: true) else { return nil }
+    let new = dir.appendingPathComponent("Decaffeinate.app")
+    if succeeds("/usr/bin/ditto", ["-x", "-k", "--noqtn", zip.path, dir.path]),
+       isOfferedUpdate(Bundle(url: new)?.infoDictionary, version: version),
+       succeeds("/usr/bin/codesign", ["--verify", "--strict", new.path]) {
+        return new
+    }
+    try? fm.removeItem(at: dir)
+    return nil
+}
+
+// Opens the app again once this process has exited: open on a running app would only bring it forward.
+func relaunch(_ app: URL) {
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: "/bin/sh")
+    p.arguments = ["-c", "while /bin/kill -0 \"$0\" 2>/dev/null; do /bin/sleep 0.2; done; /usr/bin/open \"$1\"",
+                   String(ProcessInfo.processInfo.processIdentifier), app.path]
+    try? p.run()
+}

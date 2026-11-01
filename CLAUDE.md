@@ -17,7 +17,8 @@ That stays.
 all files compiled as one module with `swiftc` by `build.sh` into a universal app (arm64 +
 x86_64), macOS 13+, ad-hoc signed. No Xcode project, no SwiftPM, no
 external dependencies, no network requests except the opt-in update
-check (this repo's latest GitHub release, never upstream's).
+check (this repo's latest GitHub release, never upstream's) and the
+download that a click on Install starts.
 
 **Map:**
 
@@ -27,7 +28,7 @@ check (this repo's latest GitHub release, never upstream's).
     safety cutoffs, `restore()`
   - `Helper.swift` — sudoers rule and its install script, `pmsetCmds`,
     the watchdog
-  - `Updates.swift` — the opt-in update check
+  - `Updates.swift` — the opt-in update check and the one-click install
   - `App.swift` — menu bar glyphs and the `App` delegate (menu, lid
     state machine, alerts)
   - `Selftest.swift` — every `precondition`, run by `--selftest`
@@ -47,7 +48,8 @@ check (this repo's latest GitHub release, never upstream's).
   `.dmg` window (CI only; the two must agree on size and icon positions)
 - `.github/workflows/ci.yml` — macOS build + selftest, hook tests, each
   only when the changed files can affect it; on a `v*` tag, all of them,
-  then the `.dmg` and the GitHub Release
+  then the `.dmg`, the `Decaffeinate.zip` the app installs from, and the
+  GitHub Release
 - `.claude/` — hooks and skills for working with Claude
 
 ## Guiding principles
