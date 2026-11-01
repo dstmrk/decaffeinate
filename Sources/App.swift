@@ -34,11 +34,12 @@ class App: NSObject, NSApplicationDelegate {
     let lockedItem = NSMenuItem(title: "Keep awake when screen locked", action: #selector(flipLocked), keyEquivalent: "")
     let loginItem = NSMenuItem(title: "Launch at login", action: #selector(flipLogin), keyEquivalent: "")
     let watchdogItem = NSMenuItem(title: "Crash protection is off, fix…", action: #selector(openLoginItems), keyEquivalent: "")
-    let updateItem = NSMenuItem(title: "", action: #selector(openReleases), keyEquivalent: "")
+    let updateItem = NSMenuItem(title: "", action: #selector(installLatest), keyEquivalent: "")
     let dailyUpdatesItem = NSMenuItem(title: "Check for updates daily", action: #selector(flipDailyUpdates), keyEquivalent: "")
     let checkUpdatesItem = NSMenuItem(title: "Check for updates…", action: #selector(checkUpdatesNow), keyEquivalent: "")
     var dailyUpdates: Bool { UserDefaults.standard.bool(forKey: "dailyUpdates") } // opt-in: off means no network requests
     var latestVersion: String? // set when a check found a newer release
+    var updating = false // downloading it
     var lowPower: Bool { UserDefaults.standard.object(forKey: "lowPower") as? Bool ?? true }
     var enabled = UserDefaults.standard.object(forKey: "enabled") as? Bool ?? true
     var sessionActive = true
@@ -263,7 +264,8 @@ class App: NSObject, NSApplicationDelegate {
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         dailyUpdatesItem.state = dailyUpdates ? .on : .off
         updateItem.isHidden = latestVersion == nil
-        updateItem.title = "Download Decaffeinate \(latestVersion ?? "")"
+        updateItem.title = updating ? "Installing Decaffeinate \(latestVersion ?? "")…" : "Install Decaffeinate \(latestVersion ?? "")"
+        updateItem.isEnabled = !updating
     }
 
     func checkDaily() {
@@ -273,7 +275,7 @@ class App: NSObject, NSApplicationDelegate {
     }
 
     // Only a successful check counts as the day's check. The daily one stays quiet: a newer release
-    // shows up as the Download item at the top of the menu. A manual one answers with an alert either way.
+    // shows up as the Install item at the top of the menu. A manual one answers with an alert either way.
     func checkForUpdate(manual: Bool) {
         fetchLatestTag { [weak self] tag in
             guard let self else { return }
@@ -288,21 +290,58 @@ class App: NSObject, NSApplicationDelegate {
 
     func showUpdateResult(found: Bool) {
         let alert = NSAlert()
-        let offered = found ? latestVersion : nil // a check finishing while the alert is up can't change what Download means
+        let offered = found ? latestVersion : nil // a check finishing while the alert is up can't change what Install means
         if !found {
             alert.messageText = "Couldn't check for updates"
             alert.informativeText = "GitHub didn't return a release. Check your connection and try again later."
         } else if let v = offered {
             alert.messageText = "Decaffeinate \(v) is available"
-            alert.informativeText = "You have \(appVersion). The download page opens in your browser."
-            alert.addButton(withTitle: "Download")
+            alert.informativeText = "You have \(appVersion). Decaffeinate downloads it, quits and opens again."
+            alert.addButton(withTitle: "Install")
             alert.addButton(withTitle: "Later")
         } else {
             alert.messageText = "Decaffeinate is up to date"
             alert.informativeText = "\(appVersion) is the latest version."
         }
         NSApp.activate(ignoringOtherApps: true)
-        if alert.runModal() == .alertFirstButtonReturn && offered != nil { openReleases() }
+        if alert.runModal() == .alertFirstButtonReturn, let offered { install(offered) }
+    }
+
+    @objc func installLatest() { if let v = latestVersion { install(v) } }
+
+    // Downloads, swaps the bundle in place and relaunches. Quitting runs restore() like any quit; the new app
+    // re-arms at launch. Not with the lid closed (it can close during the download): a quit then would leave a Mac
+    // in a bag awake with nothing watching it, so the Install item just stays for later.
+    func install(_ v: String) {
+        guard !updating else { return }
+        updating = true
+        refreshUI()
+        let app = Bundle.main.bundleURL
+        downloadUpdate(v, beside: app) { [weak self] new in
+            guard let self else { return }
+            self.updating = false
+            self.refreshUI()
+            defer { if let new { try? FileManager.default.removeItem(at: new.deletingLastPathComponent()) } }
+            if lidClosed() == true { return }
+            // replaceItemAt fails on a read-only copy (run from the dmg, or translocated) or without write access.
+            guard let new, (try? FileManager.default.replaceItemAt(app, withItemAt: new)) != nil else {
+                self.showInstallFailed(v)
+                return
+            }
+            relaunch(app)
+            DispatchQueue.main.async { NSApp.terminate(nil) } // after the defer: terminate never returns
+        }
+    }
+
+    func showInstallFailed(_ v: String) {
+        let alert = NSAlert()
+        alert.messageText = "Couldn't install Decaffeinate \(v)"
+        alert.informativeText = "The download failed, or macOS didn't let Decaffeinate replace itself. " +
+            "You can download it from the release page instead."
+        alert.addButton(withTitle: "Open Release Page")
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn { openReleases() }
     }
 
     @objc func checkUpdatesNow() { checkForUpdate(manual: true) }
