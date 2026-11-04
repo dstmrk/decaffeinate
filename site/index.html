@@ -6,8 +6,8 @@
 <title>Decaffeinate: keep your MacBook awake with the lid closed</title>
 <meta name="description" content="Free, open source macOS menu bar app that keeps your MacBook awake with the lid closed, in Low Power Mode with the display off, so AI agents and long builds keep running.">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#D9E4E0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E1312" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0A0A0D" media="(prefers-color-scheme: dark)">
 <link rel="canonical" href="https://decaffeinate-app.pages.dev/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://decaffeinate-app.pages.dev/">
@@ -17,116 +17,177 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 8h12a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z' fill='%232B4BFF'/%3E%3Cpath d='M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1' stroke='%230B0F0E'/%3E%3Cpath d='M6 2v2M10 2v2M14 2v2' stroke='%230B0F0E' stroke-width='3.4'/%3E%3Cpath d='M6 2v2M10 2v2M14 2v2' stroke='%23FFD60A' stroke-width='1.4'/%3E%3C/svg%3E">
 <style>
 :root{
-  --bg:#D9E4E0;--surface:#EEF3F1;--ink:#0B0F0E;--blue:#2B4BFF;--yellow:#FFD60A;--on-blue:#FFFFFF;
-  --font:ui-sans-serif,-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",system-ui,sans-serif;
+  --bg:#FAFAF8;--surface:#FFFFFF;--ink:#0B0B0F;--muted:#5C5F66;--line:rgba(15,23,42,.08);--soft:#EEF1FF;
+  --blue:#2B4BFF;--accent:#2B4BFF;--yellow:#FFD60A;
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -8px rgba(15,23,42,.10);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.2,.8,.2,1);
 }
 @media (prefers-color-scheme:dark){
-  :root{--bg:#0E1312;--surface:#172120;--ink:#EEF3F1}
+  :root{--bg:#0A0A0D;--surface:#141418;--ink:#F5F5F7;--muted:#9A9AA2;--line:rgba(255,255,255,.09);--soft:#171A2E;--accent:#7D93FF;
+    --shadow:0 0 0 1px rgba(255,255,255,.04),0 12px 32px -12px rgba(0,0,0,.7)}
 }
 *{box-sizing:border-box;margin:0}
-html{-webkit-text-size-adjust:100%}
-body{background:var(--bg);color:var(--ink);font:500 18px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font:400 17px/1.55 var(--font);-webkit-font-smoothing:antialiased}
 a{color:inherit}
-:focus-visible{outline:4px solid var(--blue);outline-offset:3px}
-@media (prefers-color-scheme:dark){:focus-visible{outline-color:var(--yellow)}}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
 .wrap{width:min(1080px,100% - 32px);margin-inline:auto}
+code{font:500 .9em var(--mono)}
 
 /* nav */
-.nav{border-bottom:3px solid var(--ink);background:var(--surface)}
-.nav .wrap{display:flex;align-items:center;justify-content:space-between;min-height:64px}
-.brand{display:flex;align-items:center;gap:12px;font-weight:900;font-size:20px;letter-spacing:-.02em;text-decoration:none}
-.brand svg{width:34px;height:34px;display:block}
-.nav a.link{font:700 15px var(--mono);text-decoration:none;padding:10px 4px}
-.nav a.link:hover{text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:5px}
+.nav{position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 78%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.6);backdrop-filter:blur(18px) saturate(1.6)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;min-height:56px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:17px;letter-spacing:-.01em;text-decoration:none}
+.brand svg{width:28px;height:28px;display:block}
+.links{display:flex;gap:20px}
+.links a{font-size:15px;font-weight:500;color:var(--muted);text-decoration:none;padding:10px 0}
+.links a:hover{color:var(--ink)}
 
 /* hero */
-.hero{padding:48px 0 24px;display:grid;gap:40px;align-items:center}
-@media (min-width:900px){.hero{grid-template-columns:1fr 1.08fr;padding:72px 0 56px}}
-h1{font-weight:900;font-size:clamp(40px,5.6vw,70px);line-height:1.02;letter-spacing:-.04em;text-wrap:balance}
-.mark{display:inline-block;background:var(--yellow);color:#0B0F0E;padding:0 .12em;margin-top:.06em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
-.lede{margin-top:24px;max-width:34em;font-size:clamp(18px,1.6vw,21px)}
-.cta{margin-top:32px;display:flex;flex-wrap:wrap;gap:16px}
-.btn{display:inline-flex;align-items:center;min-height:52px;padding:0 24px;border:3px solid var(--ink);background:var(--yellow);color:#0B0F0E;font:800 18px/1 var(--font);text-decoration:none;box-shadow:6px 6px 0 var(--ink);transition:transform .08s,box-shadow .08s}
-.btn:hover{transform:translate(2px,2px);box-shadow:4px 4px 0 var(--ink)}
-.btn:active{transform:translate(6px,6px);box-shadow:0 0 0 var(--ink)}
-.btn.alt{background:var(--surface);color:var(--ink)}
-.facts{margin-top:28px;font:600 14px/1.6 var(--mono)}
+.hero{padding:72px 0 8px;text-align:center}
+@media (min-width:900px){.hero{padding-top:104px}}
+h1{font-weight:650;font-size:clamp(44px,7vw,88px);line-height:.98;letter-spacing:-.045em;text-wrap:balance}
+h1 span{color:var(--accent)}
+.lede{margin:24px auto 0;max-width:34em;color:var(--muted);font-size:clamp(18px,1.5vw,20px);text-wrap:pretty}
+.cta{margin-top:32px;display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+.btn{display:inline-flex;align-items:center;min-height:48px;padding:0 22px;border-radius:999px;background:var(--ink);color:var(--bg);font:600 16px/1 var(--font);text-decoration:none;box-shadow:var(--shadow);transition:transform .15s var(--ease),opacity .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:none;opacity:.85}
+.btn.alt{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line),var(--shadow)}
+.facts{margin-top:20px;color:var(--muted);font-size:14px}
 
-/* steps */
-.steps{padding:32px 0 56px;display:grid;gap:24px}
-@media (min-width:800px){.steps{grid-template-columns:repeat(3,1fr);gap:28px}}
-.card{border:3px solid var(--ink);background:var(--surface);padding:24px;box-shadow:8px 8px 0 var(--ink)}
-.card.blue{background:var(--blue);color:var(--on-blue)}
-.num{display:grid;place-items:center;width:44px;height:44px;margin-bottom:16px;border:3px solid var(--ink);background:var(--yellow);color:#0B0F0E;font:900 22px/1 var(--mono)}
-.card.blue .num{border-color:#0B0F0E}
-.card h2{font-size:26px;line-height:1.1;letter-spacing:-.02em;font-weight:900}
-.card p{margin-top:10px;font-size:17px}
-.card code{font:700 .88em var(--mono)}
-.safe{margin-bottom:64px;border:3px solid var(--ink);background:var(--ink);color:var(--bg);padding:20px 24px;font:600 16px/1.55 var(--mono)}
-.safe b{color:var(--yellow)}
-
-/* footer */
-footer{border-top:3px solid var(--ink);background:var(--surface);padding:28px 0 36px;font:500 15px/1.65 var(--mono)}
-footer p+p{margin-top:12px}
-footer a{font-weight:700}
-
-/* laptop: a 14-inch MacBook Pro, flat colours, hard shadow */
-.mac{--w:clamp(270px,38vw,460px);--d:calc(var(--w)*.708);--line:#0B0F0E;--silver:#D7DADB;--edge:#AEB3B5;
-  position:relative;width:var(--w);height:calc(var(--w)*1.0 + 112px);margin-inline:auto;perspective:calc(var(--w)*3.4)}
-.rig{position:absolute;left:calc(var(--w)*.09);top:calc(var(--w)*.72);width:var(--w);height:0;transform-style:preserve-3d;transform:rotateX(-20deg) rotateY(-14deg)}
+/* the MacBook: a 14-inch MacBook Pro seen from the front, in CSS 3D. Scrolling closes the lid. */
+.stage{position:relative}
+.pin{display:grid;justify-items:center;gap:8px;padding:40px 0 64px;overflow:clip}
+.mbp{--W:min(960px,100vw - 32px);--L:calc(var(--W)*.62);--D:calc(var(--W)*.6);--T:calc(var(--W)*.022);
+  --metal:linear-gradient(100deg,#8f9195,#f2f3f4 16%,#cfd1d4 50%,#f2f3f4 84%,#8f9195);
+  --metal-top:linear-gradient(180deg,#d9dbde,#c6c9cc);
+  --metal-base:linear-gradient(90deg,#77797f 0%,#d7d9dc 5%,#f3f4f5 28%,#e2e3e5 72%,#d7d9dc 95%,#77797f 100%);
+  --deck:#cfd2d5;--keys:#1c1d20;
+  position:relative;width:var(--W);height:calc(var(--L) + var(--W)*.09);perspective:calc(var(--W)*5);perspective-origin:50% 30%}
+@media (prefers-color-scheme:dark){
+  .mbp{--metal:linear-gradient(100deg,#1b1c1f,#4a4c52 16%,#2d2e33 50%,#4a4c52 84%,#1b1c1f);
+    --metal-top:linear-gradient(180deg,#3a3c41,#2b2c30);
+    --metal-base:linear-gradient(90deg,#121315 0%,#3a3c41 5%,#55575d 28%,#45474c 72%,#3a3c41 95%,#121315 100%);
+    --deck:#2e3034;--keys:#0b0b0d}
+}
+.rig{position:absolute;left:0;top:var(--L);width:var(--W);height:0;transform-style:preserve-3d;transform-origin:50% 0 calc(var(--D)/2)}
 .rig>*{position:absolute}
-.shadow{left:0;top:0;width:var(--w);height:var(--d);transform-origin:50% 0;transform:translate(calc(var(--w)*.035),calc(var(--w)*.035)) translateZ(0) rotateX(90deg);background:var(--ink)}
-.rig .shadow{top:9px}
-.deck{left:0;top:0;width:var(--w);height:var(--d);transform-origin:50% 0;transform:rotateX(90deg);background:var(--silver);border:2px solid var(--line);border-radius:calc(var(--w)*.012) calc(var(--w)*.012) calc(var(--w)*.03) calc(var(--w)*.03)}
-.keys{position:absolute;left:5.5%;right:5.5%;top:7%;height:43%;border-radius:3px;
-  --k:calc(var(--w)*.0535);--g:max(2px,calc(var(--w)*.0045));
+.lid{left:calc(var(--W)*.02);bottom:0;width:calc(var(--W)*.96);height:var(--L);transform-origin:50% 100%;transform-style:preserve-3d}
+.lid>*{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden;border-radius:calc(var(--W)*.024) calc(var(--W)*.024) calc(var(--W)*.005) calc(var(--W)*.005)}
+.lid-front{background:var(--metal);padding:calc(var(--W)*.0028);box-shadow:0 0 0 .5px rgba(0,0,0,.25)}
+.bezel{height:100%;border-radius:calc(var(--W)*.021) calc(var(--W)*.021) calc(var(--W)*.003) calc(var(--W)*.003);background:#050506;padding:calc(var(--W)*.011) calc(var(--W)*.011) calc(var(--W)*.013);box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+.lid-back{transform:rotateY(180deg);background:var(--metal-top);display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.lid-back svg{width:13%;height:auto;transform:rotate(180deg)}
+.deck{left:0;top:calc(var(--W)*.003);width:var(--W);height:var(--D);transform-origin:50% 0;transform:rotateX(90deg);background:var(--deck);border-radius:calc(var(--W)*.008) calc(var(--W)*.008) calc(var(--W)*.03) calc(var(--W)*.03)}
+.keys{position:absolute;left:9%;right:9%;top:7%;height:40%;border-radius:calc(var(--W)*.006);
+  --k:calc(var(--W)*.0545);--g:calc(var(--W)*.006);
   background:
-    repeating-linear-gradient(90deg,transparent 0 calc(var(--k) - var(--g)),var(--silver) calc(var(--k) - var(--g)) var(--k)),
-    repeating-linear-gradient(0deg,transparent 0 calc(var(--k) - var(--g)),var(--silver) calc(var(--k) - var(--g)) var(--k)),
-    var(--line)}
-.pad{left:32%;right:32%;bottom:6%;height:31%;border:2px solid var(--line);border-radius:calc(var(--w)*.01);background:var(--silver)}
-.grille{position:absolute;top:7%;width:4%;height:43%;background:radial-gradient(circle,var(--line) 0 1px,transparent 1.5px) 0 0/5px 5px}
-.grille.l{left:.7%}.grille.r{right:.7%}
-.front{left:0;top:0;width:var(--w);height:9px;transform:translateZ(var(--d));background:var(--edge);border:2px solid var(--line);border-top:0;border-radius:0 0 calc(var(--w)*.03) calc(var(--w)*.03)}
-.lidwrap{left:0;top:-3px;width:var(--w);height:0;transform-style:preserve-3d}
-.lid{position:absolute;left:0;bottom:0;width:var(--w);height:var(--d);transform-origin:50% 100%;transform-style:preserve-3d;transform:rotateX(18deg);animation:lid 10s cubic-bezier(.65,0,.35,1) infinite}
-.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--silver);border:2px solid var(--line);border-radius:calc(var(--w)*.022) calc(var(--w)*.022) calc(var(--w)*.008) calc(var(--w)*.008)}
-.out{transform:rotateY(180deg);display:grid;place-items:center}
-.out svg{width:24%;height:auto;transform:rotate(180deg)}
-.glass{position:absolute;left:1.4%;right:1.4%;top:1.7%;bottom:4.2%;background:#000;border-radius:calc(var(--w)*.012);padding:calc(var(--w)*.008)}
-.display{position:relative;width:100%;height:100%;overflow:hidden;border-radius:calc(var(--w)*.006);background:#000}
-.content{position:absolute;inset:0;background:var(--blue);animation:wake 10s linear infinite}
-.sun{position:absolute;left:12%;bottom:-24%;width:38%;aspect-ratio:1;border-radius:50%;background:var(--yellow);border:max(2px,calc(var(--w)*.006)) solid #0B0F0E}
-.bar{position:absolute;left:0;right:0;top:0;height:calc(var(--w)*.03);background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:space-between;padding:0 3%}
-.bar i{display:block;height:28%;width:5%;border-radius:2px;background:#fff;opacity:.85;margin-right:2%}
-.bar .l{display:flex;align-items:center;width:40%}
-.bar svg{width:calc(var(--w)*.02);height:calc(var(--w)*.02);display:block}
-.pop{position:absolute;right:3%;top:calc(var(--w)*.034);width:30%;padding:3% 3%;background:#fff;border:max(1.5px,calc(var(--w)*.004)) solid #0B0F0E;border-radius:4px;display:grid;gap:calc(var(--w)*.009)}
-.pop i{display:block;height:calc(var(--w)*.008);border-radius:2px;background:#0B0F0E;opacity:.75}
-.pop i:nth-child(2){width:70%}.pop i:nth-child(3){width:85%;background:var(--blue);opacity:1;height:calc(var(--w)*.014)}
-.notch{position:absolute;left:50%;top:0;transform:translateX(-50%);width:11.5%;height:calc(var(--w)*.03);background:#000;border-radius:0 0 calc(var(--w)*.011) calc(var(--w)*.011)}
-.steam{position:absolute;left:50%;top:calc(var(--w)*.66);width:calc(var(--w)*.2);margin-left:calc(var(--w)*-.1);opacity:0;animation:steam 10s linear infinite;pointer-events:none}
+    repeating-linear-gradient(90deg,transparent 0 calc(var(--k) - var(--g)),var(--deck) calc(var(--k) - var(--g)) var(--k)),
+    repeating-linear-gradient(0deg,transparent 0 calc(var(--k) - var(--g)),var(--deck) calc(var(--k) - var(--g)) var(--k)),
+    var(--keys)}
+.trackpad{position:absolute;left:31%;right:31%;bottom:7%;height:38%;border-radius:calc(var(--W)*.012);background:rgba(0,0,0,.06);box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.front{left:0;top:0;width:var(--W);height:var(--T);transform:translateZ(var(--D));background:var(--metal-base);
+  border-radius:calc(var(--W)*.003) calc(var(--W)*.003) calc(var(--W)*.03) calc(var(--W)*.03)/calc(var(--W)*.003) calc(var(--W)*.003) calc(var(--W)*.02) calc(var(--W)*.02);
+  box-shadow:inset 0 1px rgba(255,255,255,.7),inset 0 -2px 3px rgba(0,0,0,.25)}
+.front::before{content:"";position:absolute;left:43%;width:14%;top:0;height:40%;border-radius:0 0 calc(var(--W)*.012) calc(var(--W)*.012);background:linear-gradient(rgba(0,0,0,.16),rgba(0,0,0,.04))}
+.floor{left:-6%;top:var(--T);width:112%;height:calc(var(--D)*1.1);transform-origin:50% 0;transform:rotateX(90deg) translateY(-5%);background:radial-gradient(closest-side,rgba(15,16,18,.30),rgba(15,16,18,.08) 60%,transparent);filter:blur(calc(var(--W)*.01))}
+
+/* what the screen shows: a terminal running an agent, the Decaffeinate menu open */
+.screen{position:relative;height:100%;overflow:hidden;border-radius:calc(var(--W)*.006);font-family:var(--font);color:#1d1d1f;
+  background:radial-gradient(60% 70% at 15% 0%,#7f95ff,transparent 70%),radial-gradient(50% 60% at 100% 100%,#ffd76a,transparent 70%),linear-gradient(160deg,#4d68ff,#9db0ff 55%,#ffe7a6)}
+.menubar{position:absolute;left:0;right:0;top:0;height:calc(var(--W)*.018);display:flex;align-items:center;justify-content:space-between;padding:0 1.6%;background:rgba(255,255,255,.42);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font-size:calc(var(--W)*.0085);font-weight:500;white-space:nowrap}
+.menubar b{font-weight:700;margin-right:1.4em}
+.menubar span{margin-right:1.2em}
+.tray{display:flex;align-items:center;gap:calc(var(--W)*.009)}
+.tray svg{width:calc(var(--W)*.0125);height:calc(var(--W)*.0125);display:block}
+.tray .on{display:grid;place-items:center;padding:0 calc(var(--W)*.003);height:calc(var(--W)*.014);border-radius:calc(var(--W)*.003);background:rgba(0,0,0,.14)}
+.batt{width:calc(var(--W)*.017);height:calc(var(--W)*.008);border-radius:2px;border:1px solid #1d1d1f;padding:1px}
+.batt i{display:block;width:70%;height:100%;background:#1d1d1f;border-radius:1px}
+.menu{position:absolute;right:9.5%;top:calc(var(--W)*.021);width:30%;padding:calc(var(--W)*.004);border-radius:calc(var(--W)*.007);background:rgba(246,246,248,.86);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:0 calc(var(--W)*.008) calc(var(--W)*.03) rgba(0,0,0,.25),0 0 0 .5px rgba(0,0,0,.2);font-size:calc(var(--W)*.0098)}
+.menu p{display:flex;justify-content:space-between;padding:calc(var(--W)*.003) calc(var(--W)*.008);border-radius:calc(var(--W)*.004)}
+.menu p.hi{background:var(--blue);color:#fff}
+.menu hr{border:0;border-top:1px solid rgba(0,0,0,.1);margin:calc(var(--W)*.003) calc(var(--W)*.006)}
+.menu small{font-size:1em;opacity:.55}
+.term{position:absolute;left:7%;top:13%;width:54%;height:62%;border-radius:calc(var(--W)*.008);background:#1b1b1f;box-shadow:0 calc(var(--W)*.016) calc(var(--W)*.04) rgba(10,20,60,.35),0 0 0 .5px rgba(0,0,0,.4);overflow:hidden}
+.term-bar{height:calc(var(--W)*.02);display:flex;align-items:center;gap:calc(var(--W)*.005);padding:0 calc(var(--W)*.008);background:#2a2a2f}
+.term-bar i{width:calc(var(--W)*.0075);height:calc(var(--W)*.0075);border-radius:50%;background:#ff5f57}
+.term-bar i:nth-child(2){background:#febc2e}.term-bar i:nth-child(3){background:#28c840}
+.term pre{padding:calc(var(--W)*.01) calc(var(--W)*.013);font:500 calc(var(--W)*.0105)/1.65 var(--mono);color:#d7d7de;white-space:pre}
+.term .g{color:#5fd27a}.term .d{color:#8a8a94}.term .y{color:#ffd60a}
+.cursor{display:inline-block;width:.6em;height:1.1em;vertical-align:-.2em;background:#d7d7de}
+.dark{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
+.notch{position:absolute;left:50%;top:0;transform:translateX(-50%);width:11.5%;height:calc(var(--W)*.018);background:#050506;border-radius:0 0 calc(var(--W)*.006) calc(var(--W)*.006)}
+.glare{position:absolute;inset:0;background:linear-gradient(118deg,rgba(255,255,255,.08) 0%,rgba(255,255,255,.02) 32%,transparent 33%);pointer-events:none}
+
+/* steam over the cup once the lid is shut */
+.steam{position:absolute;left:50%;top:calc(var(--W)*.2);width:calc(var(--W)*.075);transform:translateX(-50%);opacity:0;pointer-events:none}
 .steam svg{width:100%;height:auto;display:block;overflow:visible}
 .steam path{animation:wiggle 1.6s ease-in-out infinite alternate}
 .steam path:nth-child(2){animation-delay:-.5s}.steam path:nth-child(3){animation-delay:-1s}
-.status{position:absolute;left:0;right:0;bottom:0;text-align:center;font:700 15px/1.4 var(--mono);height:48px}
-.status span{position:absolute;inset:0;opacity:0}
-.status .a{animation:st-open 10s linear infinite}
-.status .b{animation:st-closed 10s linear infinite}
-.status small{display:block;font-weight:500;font-size:13px}
-@media (max-width:899px){.mac{--w:min(64vw,400px)}}
-@keyframes lid{0%,22%{transform:rotateX(18deg)}34%,68%{transform:rotateX(-90deg)}80%,100%{transform:rotateX(18deg)}}
-@keyframes wake{0%,26%{opacity:1}29%,77%{opacity:0}80%,100%{opacity:1}}
-@keyframes st-open{0%,22%{opacity:1}26%,78%{opacity:0}84%,100%{opacity:1}}
-@keyframes st-closed{0%,32%{opacity:0}38%,64%{opacity:1}70%,100%{opacity:0}}
-@keyframes steam{0%,36%{opacity:0}42%,62%{opacity:1}68%,100%{opacity:0}}
 @keyframes wiggle{from{transform:translateY(3px)}to{transform:translateY(-5px)}}
-@media (prefers-reduced-motion:reduce){
-  .lid,.content,.steam,.steam path,.status .b{animation:none}
-  .status .a{animation:none;opacity:1}
-  .steam{display:none}
+
+.status{position:relative;height:48px;width:100%;text-align:center;font-size:15px;color:var(--muted)}
+.status span{position:absolute;inset:0}
+.status b{color:var(--ink);font-weight:600}
+.status .b{opacity:0}
+
+/* closing: on a timer where the browser can't tie it to scrolling, to the scroll where it can */
+.lid{animation:lid 10s var(--ease) infinite alternate}
+.rig{animation:cam 10s var(--ease) infinite alternate}
+.dark{animation:dark 10s linear infinite alternate}
+.menu{animation:menu 10s linear infinite alternate}
+.steam{animation:show 10s linear infinite alternate}
+.status .a{animation:hide 10s linear infinite alternate}
+.status .b{animation:show 10s linear infinite alternate}
+@keyframes lid{0%,12%{transform:rotateX(0deg)}48%,100%{transform:rotateX(-89deg)}}
+@keyframes cam{0%,30%{transform:translateY(0) rotateX(0deg) scale(1)}64%,100%{transform:translateY(calc(var(--L)*-.5)) rotateX(-34deg) scale(.8)}}
+@keyframes dark{0%,14%{opacity:0}30%,100%{opacity:1}}
+@keyframes menu{0%,10%{opacity:1}16%,100%{opacity:0}}
+@keyframes hide{0%,14%{opacity:1}22%,100%{opacity:0}}
+@keyframes show{0%,66%{opacity:0}76%,100%{opacity:1}}
+@supports (animation-timeline:view()){
+  .stage{height:250vh;view-timeline-name:--lid}
+  .pin{position:sticky;top:0;min-height:100vh;min-height:100svh;align-content:center;padding:56px 0 24px}
+  .lid,.rig,.dark,.menu,.steam,.status .a,.status .b{animation-duration:auto;animation-iteration-count:1;animation-direction:normal;animation-fill-mode:both;
+    animation-timeline:--lid;animation-range:contain 0% contain 100%}
 }
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .stage{height:auto}
+  .pin{position:static;min-height:0}
+  .lid,.rig,.dark,.menu,.steam,.steam path,.status .a,.status .b{animation:none}
+}
+
+/* steps */
+.steps{padding:24px 0 48px;display:grid;gap:16px}
+@media (min-width:800px){.steps{grid-template-columns:repeat(3,1fr);gap:20px}}
+.card{border-radius:22px;background:var(--surface);box-shadow:0 0 0 1px var(--line),var(--shadow);padding:28px}
+.num{display:block;margin-bottom:14px;color:var(--accent);font:500 14px/1 var(--mono)}
+.card h2{font-weight:650;font-size:22px;line-height:1.15;letter-spacing:-.025em}
+.card p{margin-top:10px;color:var(--muted);font-size:16px}
+.safe{margin-bottom:96px;border-radius:22px;background:var(--soft);padding:22px 26px;font-size:16px}
+.safe b{color:var(--accent);font-weight:650}
+
+/* faq */
+.faq{margin:0 auto 96px;max-width:760px;scroll-margin-top:80px}
+.faq h2{font-weight:650;font-size:clamp(30px,3.3vw,44px);line-height:1.06;letter-spacing:-.045em;margin-bottom:20px;text-align:center}
+.faq details{border-bottom:1px solid var(--line)}
+.faq details:first-of-type{border-top:1px solid var(--line)}
+.faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 4px;font-weight:550;font-size:17px;line-height:1.35}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"";flex:none;width:9px;height:9px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:translateY(-2px) rotate(45deg);transition:transform .2s var(--ease)}
+.faq details[open] summary::after{transform:translateY(3px) rotate(-135deg)}
+.faq details p{padding:0 4px 22px;color:var(--muted);font-size:16px}
+.faq details code,.faq details b{color:var(--ink)}
+.faq details b{font-weight:600}
+
+/* footer */
+footer{border-top:1px solid var(--line);padding:28px 0 36px;color:var(--muted);font-size:14px;line-height:1.65}
+footer p+p{margin-top:12px}
+footer a{color:var(--ink);font-weight:500}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 </style>
 </head>
@@ -143,57 +204,115 @@ footer a{font-weight:700}
 <header class="nav">
   <div class="wrap">
     <a class="brand" href="/" aria-label="Decaffeinate">
-      <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="2" y="2" width="96" height="96" rx="22" fill="#D9E4E0" stroke="#0B0F0E" stroke-width="4"/><use href="#cup" x="22" y="24" width="56" height="56"/></svg>
+      <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="2" y="2" width="96" height="96" rx="22" fill="#FFFFFF" stroke="#0B0F0E" stroke-opacity=".12" stroke-width="2"/><use href="#cup" x="22" y="24" width="56" height="56"/></svg>
       Decaffeinate
     </a>
-    <a class="link" href="https://github.com/dstmrk/decaffeinate">GitHub ↗</a>
+    <nav class="links"><a href="#faq">FAQ</a><a href="https://github.com/dstmrk/decaffeinate">GitHub ↗</a></nav>
   </div>
 </header>
 
-<main class="wrap">
-  <section class="hero">
-    <div>
-      <h1>Close the lid.<br><span class="mark">Keep working.</span></h1>
-      <p class="lede">A tiny menu bar app that keeps your MacBook awake with the lid closed, in Low Power Mode with the display off, so AI agents and long builds keep running. Open the lid and everything goes back.</p>
-      <div class="cta">
-        <a class="btn" href="https://github.com/dstmrk/decaffeinate/releases/latest/download/Decaffeinate.dmg">Download for Mac</a>
-        <a class="btn alt" href="https://github.com/dstmrk/decaffeinate">View source</a>
-      </div>
-      <p class="facts">Free · MIT · macOS 13+ · Apple silicon &amp; Intel</p>
+<main>
+  <section class="hero wrap">
+    <h1>Close the lid.<br><span>Keep working.</span></h1>
+    <p class="lede">A tiny menu bar app that keeps your MacBook awake with the lid closed, in Low Power Mode with the display off, so AI agents and long builds keep running. Open the lid and everything goes back.</p>
+    <div class="cta">
+      <a class="btn" href="https://github.com/dstmrk/decaffeinate/releases/latest/download/Decaffeinate.dmg">Download for Mac</a>
+      <a class="btn alt" href="https://github.com/dstmrk/decaffeinate">View source</a>
     </div>
-
-    <figure class="mac" role="img" aria-label="A MacBook Pro closes its lid, and the cup on the lid starts to steam: the Mac is still running.">
-      <div class="rig" aria-hidden="true">
-        <div class="shadow"></div>
-        <div class="deck"><div class="grille l"></div><div class="keys"></div><div class="grille r"></div><div class="pad"></div></div>
-        <div class="front"></div>
-        <div class="lidwrap"><div class="lid">
-          <div class="face scr"><div class="glass"><div class="display">
-            <div class="content">
-              <div class="sun"></div>
-              <div class="bar"><span class="l"><i></i><i></i><i></i></span><svg viewBox="0 0 24 24" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h12a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z" fill="#fff"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1M6 2v2M10 2v2M14 2v2" fill="none"/></svg></div>
-              <div class="pop"><i></i><i></i><i></i></div>
-            </div>
-            <div class="notch"></div>
-          </div></div></div>
-          <div class="face out"><svg viewBox="0 0 24 24"><use href="#cup"/></svg></div>
-        </div></div>
-      </div>
-      <div class="steam" aria-hidden="true"><svg viewBox="0 0 24 12" fill="none" stroke-linecap="round"><g stroke="#0B0F0E" stroke-width="3.4"><path d="M6 10V3"/><path d="M12 10V1"/><path d="M18 10V3"/></g><g stroke="#FFD60A" stroke-width="1.4"><path d="M6 10V3"/><path d="M12 10V1"/><path d="M18 10V3"/></g></svg></div>
-      <figcaption class="status" aria-hidden="true">
-        <span class="a">Lid open</span>
-        <span class="b">Lid closed. Still running.<small>Low Power Mode · display off</small></span>
-      </figcaption>
-    </figure>
+    <p class="facts">Free · MIT · macOS 13+ · Apple silicon &amp; Intel</p>
   </section>
 
-  <section class="steps" aria-label="How it works">
-    <article class="card"><div class="num">1</div><h2>Approve once</h2><p>On first launch, one admin prompt adds a sudoers rule that allows only <code>pmset</code> sleep and Low Power changes.</p></article>
-    <article class="card blue"><div class="num">2</div><h2>Close the lid</h2><p>The Mac stays awake, switches to Low Power Mode and turns the display off. Your agents keep going.</p></article>
-    <article class="card"><div class="num">3</div><h2>Open it</h2><p>Your exact battery and charger settings come back. Nothing to undo.</p></article>
+  <section class="stage" aria-label="Demo">
+    <div class="pin">
+      <figure class="mbp" role="img" aria-label="A MacBook Pro running an AI agent in Terminal closes its lid; the display turns off and the cup on the lid starts to steam: the Mac is still running.">
+        <div class="rig" aria-hidden="true">
+          <div class="floor"></div>
+          <div class="deck"><div class="keys"></div><div class="trackpad"></div></div>
+          <div class="front"></div>
+          <div class="lid">
+            <div class="lid-front"><div class="bezel"><div class="screen">
+              <div class="menubar">
+                <div><b>Terminal</b><span>Shell</span><span>Edit</span><span>View</span><span>Window</span></div>
+                <div class="tray">
+                  <span class="on"><svg viewBox="0 0 24 24" fill="none" stroke="#1d1d1f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h12a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z" fill="#1d1d1f"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1M6 2v2M10 2v2M14 2v2"/></svg></span>
+                  <span class="batt"><i></i></span>
+                  <span>Wed 22:41</span>
+                </div>
+              </div>
+              <div class="term">
+                <div class="term-bar"><i></i><i></i><i></i></div>
+<pre><span class="d">~/code/shop</span> $ agent "fix the flaky checkout tests"
+<span class="y">▸</span> Reading 214 files
+<span class="y">▸</span> Running the test suite <span class="d">(7 of 12)</span>
+<span class="g">✓</span> auth.spec.ts      <span class="d">38 passed</span>
+<span class="g">✓</span> cart.spec.ts      <span class="d">51 passed</span>
+<span class="y">▸</span> Patching src/checkout/retry.ts
+<span class="y">▸</span> Re-running checkout.spec.ts <span class="cursor"></span></pre>
+              </div>
+              <div class="menu">
+                <p class="hi"><span>✓ Keep awake when lid closed</span></p>
+                <p><span>Sleep now</span></p>
+                <p><span>Settings</span><small>›</small></p>
+                <hr>
+                <p><span>Quit</span><small>⌘Q</small></p>
+              </div>
+              <div class="dark"></div>
+              <div class="notch"></div>
+              <div class="glare"></div>
+            </div></div></div>
+            <div class="lid-back"><svg viewBox="0 0 24 24"><use href="#cup"/></svg></div>
+          </div>
+        </div>
+        <div class="steam" aria-hidden="true"><svg viewBox="0 0 24 12" fill="none" stroke-linecap="round"><g stroke="#0B0F0E" stroke-width="3.4"><path d="M6 10V3"/><path d="M12 10V1"/><path d="M18 10V3"/></g><g stroke="#FFD60A" stroke-width="1.4"><path d="M6 10V3"/><path d="M12 10V1"/><path d="M18 10V3"/></g></svg></div>
+      </figure>
+      <p class="status" aria-hidden="true">
+        <span class="a"><b>Lid open.</b> Your agent is working.</span>
+        <span class="b"><b>Lid closed. Still running.</b><br>Low Power Mode · display off</span>
+      </p>
+    </div>
   </section>
 
-  <p class="safe"><b>It never stays awake unattended.</b> Heat, a low battery, quit, logout or a crash all let the Mac sleep again.</p>
+  <div class="wrap">
+    <section class="steps" aria-label="How it works">
+      <article class="card"><span class="num">01</span><h2>Approve once</h2><p>On first launch, one admin prompt adds a sudoers rule that allows only <code>pmset</code> sleep and Low Power changes.</p></article>
+      <article class="card"><span class="num">02</span><h2>Close the lid</h2><p>The Mac stays awake, switches to Low Power Mode and turns the display off. Your agents keep going.</p></article>
+      <article class="card"><span class="num">03</span><h2>Open it</h2><p>Your exact battery and charger settings come back. Nothing to undo.</p></article>
+    </section>
+
+    <p class="safe"><b>It never stays awake unattended.</b> Heat, a low battery, quit, logout or a crash all let the Mac sleep again.</p>
+
+    <section class="faq" id="faq" aria-labelledby="faq-h">
+      <h2 id="faq-h">Questions</h2>
+      <details>
+        <summary>Why does it ask for my password?</summary>
+        <p>Once, on first launch, to add a rule that lets Decaffeinate run a short list of <code>pmset</code> commands without asking again: sleep on or off, Low Power Mode on or off. Nothing else. It can't install software, read your files or run other commands as admin. The rule is one line in <code>/etc/sudoers.d/decaffeinate</code>, and you can read it.</p>
+      </details>
+      <details>
+        <summary>macOS says it can't check the app for malicious software. Is it safe?</summary>
+        <p>The warning appears because Decaffeinate isn't notarized: that needs a paid Apple developer account, and the app is free. The full source is on GitHub and every release is built by GitHub's servers from that source. To open it: click <b>Done</b>, then <b>System Settings › Privacy &amp; Security › Open Anyway</b>. Only the first time.</p>
+      </details>
+      <details>
+        <summary>What if it crashes with the lid closed?</summary>
+        <p>A small background check, installed with the app, notices within a minute, turns lid-close sleep back on and puts the Mac to sleep. Your Low Power Mode settings come back too.</p>
+      </details>
+      <details>
+        <summary>Will it overheat in a bag?</summary>
+        <p>No. On battery, the Mac goes to sleep as soon as it runs warm, because a closed MacBook in a bag can't cool down. It also sleeps when the battery drops below 20%, or the limit you choose.</p>
+      </details>
+      <details>
+        <summary>How much battery does it use?</summary>
+        <p>Pilot Light's measurements on an M5 Max MacBook Pro: 4.8 W with the lid closed against 16.7 W open, which is about 20 hours instead of 6. Heavy builds draw more.</p>
+      </details>
+      <details>
+        <summary>Does it send any data?</summary>
+        <p>No. Without your consent it makes no network requests at all. If you turn on update checks, it asks GitHub for the latest version number, and sends nothing about your Mac.</p>
+      </details>
+      <details>
+        <summary>How do I remove it?</summary>
+        <p>Menu › <b>Settings › Uninstall…</b> It turns sleep back on, removes the rule and the background check, and moves itself to the Bin.</p>
+      </details>
+    </section>
+  </div>
 </main>
 
 <footer>
