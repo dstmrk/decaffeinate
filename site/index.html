@@ -61,30 +61,46 @@ h1 span{color:var(--accent)}
 /* the MacBook: a 14-inch MacBook Pro seen from the front, in CSS 3D. Scrolling closes the lid. */
 .stage{position:relative}
 .pin{display:grid;justify-items:center;gap:8px;padding:40px 0 64px;overflow:clip}
-.mbp{--W:min(960px,100vw - 32px);--L:calc(var(--W)*.62);--D:calc(var(--W)*.6);--T:calc(var(--W)*.022);
+.mbp{--W:min(960px,100vw - 32px);--L:calc(var(--W)*.62);--D:var(--L);--T:calc(var(--W)*.022);--E:calc(var(--W)*.009);--R:calc(var(--W)*.024);
   --metal:linear-gradient(100deg,#8f9195,#f2f3f4 16%,#cfd1d4 50%,#f2f3f4 84%,#8f9195);
   --metal-top:linear-gradient(180deg,#d9dbde,#c6c9cc);
-  --metal-base:linear-gradient(90deg,#77797f 0%,#d7d9dc 5%,#f3f4f5 28%,#e2e3e5 72%,#d7d9dc 95%,#77797f 100%);
+  --metal-base:linear-gradient(90deg,#d7d9dc,#f3f4f5 25%,#e2e3e5 75%,#d7d9dc);--t0:#d7d9dc;--t1:#c4c6ca;--t2:#b0b2b6;--t3:#9b9da2;--t4:#86888d;
   --deck:#cfd2d5;--keys:#1c1d20;
   position:relative;width:var(--W);height:calc(var(--L) + var(--W)*.09);perspective:calc(var(--W)*5);perspective-origin:50% 30%}
 @media (prefers-color-scheme:dark){
   .mbp{--metal:linear-gradient(100deg,#1b1c1f,#4a4c52 16%,#2d2e33 50%,#4a4c52 84%,#1b1c1f);
     --metal-top:linear-gradient(180deg,#3a3c41,#2b2c30);
-    --metal-base:linear-gradient(90deg,#121315 0%,#3a3c41 5%,#55575d 28%,#45474c 72%,#3a3c41 95%,#121315 100%);
+    --metal-base:linear-gradient(90deg,#3a3c41,#55575d 25%,#45474c 75%,#3a3c41);--t0:#3a3c41;--t1:#323438;--t2:#2b2c30;--t3:#232427;--t4:#1b1c1f;
     --deck:#2e3034;--keys:#0b0b0d}
 }
 .rig{position:absolute;left:0;top:var(--L);width:var(--W);height:0;transform-style:preserve-3d;transform-origin:50% 0 calc(var(--D)/2)}
 .rig>*{position:absolute}
 .lid{left:0;bottom:0;width:var(--W);height:var(--L);transform-origin:50% 100%;transform-style:preserve-3d}
-.lid>*{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden;border-radius:calc(var(--W)*.024) calc(var(--W)*.024) calc(var(--W)*.005) calc(var(--W)*.005)}
+.lid>*{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden;border-radius:var(--R) var(--R) calc(var(--W)*.005) calc(var(--W)*.005)}
 .lid-front{background:var(--metal);padding:calc(var(--W)*.0028);box-shadow:0 0 0 .5px rgba(0,0,0,.25)}
 .bezel{height:100%;border-radius:calc(var(--W)*.021) calc(var(--W)*.021) calc(var(--W)*.003) calc(var(--W)*.003);background:#050506;padding:calc(var(--W)*.011) calc(var(--W)*.011) calc(var(--W)*.013);box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
-/* 1px behind the screen: depth order, not backface culling alone, picks the face on top.
-   Safari skips backface-visibility for the screen's composited layers (backdrop-filter,
-   animated opacity), so with both faces on one plane the black display covered the lid. */
-.lid-back{transform:rotateY(180deg) translateZ(1px);background:var(--metal-top);display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+/* the back of the lid, the lid's thickness (--E) behind the screen. Neither backface-visibility nor depth
+   order picks the face on top in Safari: it skips both for the screen's composited layers (backdrop-filter,
+   animated opacity), and the black display showed through the lid. So the faces swap by keyframe (face-*). */
+.lid-back{visibility:hidden;transform:rotateY(180deg) translateZ(var(--E));background:var(--metal-top);display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
 .lid-back svg{width:13%;height:auto;transform:rotate(180deg)}
-.deck{left:0;top:calc(var(--W)*.003);width:var(--W);height:var(--D);transform-origin:50% 0;transform:rotateX(90deg);background:var(--deck);border-radius:calc(var(--W)*.008) calc(var(--W)*.008) calc(var(--W)*.03) calc(var(--W)*.03)}
+/* the lid's top edge: faces up while open, faces the viewer once shut; its dark bottom line is the seam */
+.lid-edge{left:var(--R);right:var(--R);bottom:auto;height:var(--E);transform-origin:50% 0;transform:rotateX(90deg) translateY(-100%);background:var(--metal-base);border-radius:0;box-shadow:inset 0 -1.5px rgba(0,0,0,.45)}
+/* rounded corners, in plan, of the lid's edge and of the base's front: four flat facets per corner, two per
+   element (.o holds the outer two). Facet n is turned (2n+1)·11.25°, its centre on the apothem (R·cos 11.25°),
+   R·2·sin 11.25° wide (+1px, so antialiasing leaves no hairline), so neighbouring facets meet on the circle. Each facet's gradient runs from one
+   neighbour's tone to the other's, so the shading turns the corner without a crease. */
+.lid-corner,.corner{width:0;transform-style:preserve-3d;--a1:11.25deg;--a2:33.75deg;--c0:var(--t0);--c1:var(--t1);--c2:var(--t2)}
+.lid-corner.o,.corner.o{--a1:56.25deg;--a2:78.75deg;--c0:var(--t2);--c1:var(--t3);--c2:var(--t4)}
+.lid-corner.l,.corner.l{--sign:-1;--dir:to left}.lid-corner.r,.corner.r{--sign:1;--dir:to right}
+.lid-corner::before,.lid-corner::after,.corner::before,.corner::after{content:"";position:absolute;top:0;left:calc(var(--R)*-.1951 - .5px);width:calc(var(--R)*.3902 + 1px);-webkit-backface-visibility:hidden;backface-visibility:hidden}
+.lid-corner::before,.corner::before{--a:var(--a1);background:linear-gradient(var(--dir),var(--c0),var(--c1))}
+.lid-corner::after,.corner::after{--a:var(--a2);background:linear-gradient(var(--dir),var(--c1),var(--c2))}
+.lid>.lid-corner{left:var(--R);top:var(--R);right:auto;bottom:auto;height:0;border-radius:0}
+.lid>.lid-corner.r{left:calc(var(--W) - var(--R))}
+.lid-corner::before,.lid-corner::after{height:var(--E);transform-origin:50% 0;box-shadow:inset 0 -1.5px rgba(0,0,0,.45);
+  transform:rotateZ(calc(var(--sign)*var(--a))) translateY(calc(var(--R)*-.9808)) rotateX(90deg) translateY(-100%)}
+.deck{left:0;top:calc(var(--W)*.003);width:var(--W);height:var(--D);transform-origin:50% 0;transform:rotateX(90deg);background:var(--deck);border-radius:calc(var(--W)*.008) calc(var(--W)*.008) var(--R) var(--R)}
 .keys{position:absolute;left:9%;right:9%;top:7%;height:40%;border-radius:calc(var(--W)*.006);
   --k:calc(var(--W)*.0545);--g:calc(var(--W)*.006);
   background:
@@ -92,10 +108,15 @@ h1 span{color:var(--accent)}
     repeating-linear-gradient(0deg,transparent 0 calc(var(--k) - var(--g)),var(--deck) calc(var(--k) - var(--g)) var(--k)),
     var(--keys)}
 .trackpad{position:absolute;left:31%;right:31%;bottom:7%;height:38%;border-radius:calc(var(--W)*.012);background:rgba(0,0,0,.06);box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
-.front{left:0;top:0;width:var(--W);height:var(--T);transform:translateZ(var(--D));background:var(--metal-base);
-  border-radius:calc(var(--W)*.003) calc(var(--W)*.003) calc(var(--W)*.03) calc(var(--W)*.03)/calc(var(--W)*.003) calc(var(--W)*.003) calc(var(--W)*.02) calc(var(--W)*.02);
-  box-shadow:inset 0 1px rgba(255,255,255,.7),inset 0 -2px 3px rgba(0,0,0,.25)}
+.front{left:var(--R);top:0;width:calc(var(--W) - 2*var(--R));height:var(--T);transform:translateZ(var(--D));background:var(--metal-base)}
+.front,.corner::before,.corner::after{box-shadow:inset 0 1px rgba(255,255,255,.7),inset 0 -2px 3px rgba(0,0,0,.25)}
+.corner{top:0;height:var(--T);transform:translateZ(calc(var(--D) - var(--R)))}
+.corner.l{left:var(--R)}.corner.r{left:calc(var(--W) - var(--R))}
+.corner::before,.corner::after{height:100%;transform:rotateY(calc(var(--sign)*var(--a))) translateZ(calc(var(--R)*.9808))}
 .front::before{content:"";position:absolute;left:43%;width:14%;top:0;height:40%;border-radius:0 0 calc(var(--W)*.012) calc(var(--W)*.012);background:linear-gradient(rgba(0,0,0,.16),rgba(0,0,0,.04))}
+/* contact shadow: the dark line where the front edge of the base meets the table */
+.contact{left:calc(var(--R)*.5);top:var(--T);width:calc(var(--W) - var(--R));height:calc(var(--W)*.03);transform-origin:50% 0;transform:translateZ(var(--D)) rotateX(90deg) translateY(-30%);
+  background:linear-gradient(rgba(10,11,13,.45) 30%,transparent);border-radius:40%;filter:blur(calc(var(--W)*.002))}
 .floor{left:-6%;top:var(--T);width:112%;height:calc(var(--D)*1.1);transform-origin:50% 0;transform:rotateX(90deg) translateY(-5%);background:radial-gradient(closest-side,rgba(15,16,18,.30),rgba(15,16,18,.08) 60%,transparent);filter:blur(calc(var(--W)*.01))}
 
 /* what the screen shows: a terminal running an agent, the Decaffeinate menu open */
@@ -143,10 +164,16 @@ h1 span{color:var(--accent)}
 .dark{animation:dark 10s linear infinite alternate}
 .menu{animation:menu 10s linear infinite alternate}
 .steam{animation:show 10s linear infinite alternate}
+.lid-front{animation:face-front 10s linear infinite alternate}
+.lid-back{animation:face-back 10s linear infinite alternate}
 .status .a{animation:hide 10s linear infinite alternate}
 .status .b{animation:show 10s linear infinite alternate}
-@keyframes lid{0%,12%{transform:rotateX(0deg)}48%,100%{transform:rotateX(-89deg)}}
+/* lid and cam set when the lid turns its back to the camera: at 30.1% of the timeline, measured
+   (the same at every width). Changing either means measuring it again for face-front and face-back. */
+@keyframes lid{0%,12%{transform:rotateX(0deg)}48%,100%{transform:rotateX(-90deg)}}
 @keyframes cam{0%,30%{transform:translateY(0) rotateX(0deg) scale(1)}64%,100%{transform:translateY(calc(var(--L)*-.5)) rotateX(-34deg) scale(.8)}}
+@keyframes face-front{0%,30%{visibility:visible}30.2%,100%{visibility:hidden}}
+@keyframes face-back{0%,30%{visibility:hidden}30.2%,100%{visibility:visible}}
 @keyframes dark{0%,14%{opacity:0}30%,100%{opacity:1}}
 @keyframes menu{0%,10%{opacity:1}16%,100%{opacity:0}}
 @keyframes hide{0%,14%{opacity:1}22%,100%{opacity:0}}
@@ -154,14 +181,14 @@ h1 span{color:var(--accent)}
 @supports (animation-timeline:view()){
   .stage{height:250vh;view-timeline-name:--lid}
   .pin{position:sticky;top:0;min-height:100vh;min-height:100svh;align-content:center;padding:56px 0 24px}
-  .lid,.rig,.dark,.menu,.steam,.status .a,.status .b{animation-duration:auto;animation-iteration-count:1;animation-direction:normal;animation-fill-mode:both;
+  .lid,.rig,.lid-front,.lid-back,.dark,.menu,.steam,.status .a,.status .b{animation-duration:auto;animation-iteration-count:1;animation-direction:normal;animation-fill-mode:both;
     animation-timeline:--lid;animation-range:contain 0% contain 100%}
 }
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .stage{height:auto}
   .pin{position:static;min-height:0}
-  .lid,.rig,.dark,.menu,.steam,.steam path,.status .a,.status .b{animation:none}
+  .lid,.rig,.lid-front,.lid-back,.dark,.menu,.steam,.steam path,.status .a,.status .b{animation:none}
 }
 
 /* steps */
@@ -230,8 +257,9 @@ footer a{color:var(--ink);font-weight:500}
       <figure class="mbp" role="img" aria-label="A MacBook Pro running an AI agent in Terminal closes its lid; the display turns off and the cup on the lid starts to steam: the Mac is still running.">
         <div class="rig" aria-hidden="true">
           <div class="floor"></div>
+          <div class="contact"></div>
           <div class="deck"><div class="keys"></div><div class="trackpad"></div></div>
-          <div class="front"></div>
+          <div class="front"></div><div class="corner l"></div><div class="corner l o"></div><div class="corner r"></div><div class="corner r o"></div>
           <div class="lid">
             <div class="lid-front"><div class="bezel"><div class="screen">
               <div class="menubar">
@@ -263,6 +291,7 @@ footer a{color:var(--ink);font-weight:500}
               <div class="notch"></div>
               <div class="glare"></div>
             </div></div></div>
+            <div class="lid-edge"></div><div class="lid-corner l"></div><div class="lid-corner l o"></div><div class="lid-corner r"></div><div class="lid-corner r o"></div>
             <div class="lid-back"><svg viewBox="0 0 24 24"><use href="#cup"/></svg></div>
           </div>
         </div>
