@@ -79,10 +79,10 @@ h1 span{color:var(--accent)}
 .lid>*{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden;border-radius:var(--R) var(--R) calc(var(--W)*.005) calc(var(--W)*.005)}
 .lid-front{background:var(--metal);padding:calc(var(--W)*.0028);box-shadow:0 0 0 .5px rgba(0,0,0,.25)}
 .bezel{height:100%;border-radius:calc(var(--W)*.021) calc(var(--W)*.021) calc(var(--W)*.003) calc(var(--W)*.003);background:#050506;padding:calc(var(--W)*.011) calc(var(--W)*.011) calc(var(--W)*.013);box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
-/* the lid's thickness behind the screen: depth order, not backface culling alone, picks the face on top.
-   Safari skips backface-visibility for the screen's composited layers (backdrop-filter,
-   animated opacity), so with both faces on one plane the black display covered the lid. */
-.lid-back{transform:rotateY(180deg) translateZ(var(--E));background:var(--metal-top);display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+/* the back of the lid, the lid's thickness (--E) behind the screen. Neither backface-visibility nor depth
+   order picks the face on top in Safari: it skips both for the screen's composited layers (backdrop-filter,
+   animated opacity), and the black display showed through the lid. So the faces swap by keyframe (face-*). */
+.lid-back{visibility:hidden;transform:rotateY(180deg) translateZ(var(--E));background:var(--metal-top);display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
 .lid-back svg{width:13%;height:auto;transform:rotate(180deg)}
 /* the lid's top edge: faces up while open, faces the viewer once shut; its dark bottom line is the seam */
 .lid-edge{left:var(--R);right:var(--R);bottom:auto;height:var(--E);transform-origin:50% 0;transform:rotateX(90deg) translateY(-100%);background:var(--metal-base);border-radius:0;box-shadow:inset 0 -1.5px rgba(0,0,0,.45)}
@@ -164,10 +164,16 @@ h1 span{color:var(--accent)}
 .dark{animation:dark 10s linear infinite alternate}
 .menu{animation:menu 10s linear infinite alternate}
 .steam{animation:show 10s linear infinite alternate}
+.lid-front{animation:face-front 10s linear infinite alternate}
+.lid-back{animation:face-back 10s linear infinite alternate}
 .status .a{animation:hide 10s linear infinite alternate}
 .status .b{animation:show 10s linear infinite alternate}
+/* lid and cam set when the lid turns its back to the camera: at 30.1% of the timeline, measured
+   (the same at every width). Changing either means measuring it again for face-front and face-back. */
 @keyframes lid{0%,12%{transform:rotateX(0deg)}48%,100%{transform:rotateX(-90deg)}}
 @keyframes cam{0%,30%{transform:translateY(0) rotateX(0deg) scale(1)}64%,100%{transform:translateY(calc(var(--L)*-.5)) rotateX(-34deg) scale(.8)}}
+@keyframes face-front{0%,30%{visibility:visible}30.2%,100%{visibility:hidden}}
+@keyframes face-back{0%,30%{visibility:hidden}30.2%,100%{visibility:visible}}
 @keyframes dark{0%,14%{opacity:0}30%,100%{opacity:1}}
 @keyframes menu{0%,10%{opacity:1}16%,100%{opacity:0}}
 @keyframes hide{0%,14%{opacity:1}22%,100%{opacity:0}}
@@ -175,14 +181,14 @@ h1 span{color:var(--accent)}
 @supports (animation-timeline:view()){
   .stage{height:250vh;view-timeline-name:--lid}
   .pin{position:sticky;top:0;min-height:100vh;min-height:100svh;align-content:center;padding:56px 0 24px}
-  .lid,.rig,.dark,.menu,.steam,.status .a,.status .b{animation-duration:auto;animation-iteration-count:1;animation-direction:normal;animation-fill-mode:both;
+  .lid,.rig,.lid-front,.lid-back,.dark,.menu,.steam,.status .a,.status .b{animation-duration:auto;animation-iteration-count:1;animation-direction:normal;animation-fill-mode:both;
     animation-timeline:--lid;animation-range:contain 0% contain 100%}
 }
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .stage{height:auto}
   .pin{position:static;min-height:0}
-  .lid,.rig,.dark,.menu,.steam,.steam path,.status .a,.status .b{animation:none}
+  .lid,.rig,.lid-front,.lid-back,.dark,.menu,.steam,.steam path,.status .a,.status .b{animation:none}
 }
 
 /* steps */
