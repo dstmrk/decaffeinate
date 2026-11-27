@@ -26,13 +26,16 @@ download that a click on Install starts.
   - `main.swift` — the credits header, `--selftest` dispatch, app start
   - `Power.swift` — `pmset`, lid, displays, Low Power Mode, battery,
     safety cutoffs, `restore()`
+  - `Display.swift` — the optional virtual display with the lid closed
+    and its display-sleep assertion; `CGVirtualDisplay.h` declares the
+    private classes it uses, weak-linked (CI checks with `nm`)
   - `Helper.swift` — sudoers rule and its install script, `pmsetCmds`,
     the watchdog
   - `Updates.swift` — the opt-in update check and the one-click install
   - `App.swift` — menu bar glyphs and the `App` delegate (menu, lid
     state machine, alerts)
   - `Selftest.swift` — every `precondition`, run by `--selftest`
-- `build.sh` — build + `Info.plist` + `LICENSE` copied into the
+- `build.sh` — build (with `-import-objc-header Sources/CGVirtualDisplay.h`) + `Info.plist` + `LICENSE` copied into the
   bundle's `Resources/` (version from the `VERSION` env var, else
   the latest git tag, else `0.0.0`; CI sets it from a release tag)
 - `io.github.dstmrk.decaffeinate.watchdog.plist` — LaunchAgent that
@@ -122,7 +125,8 @@ download that a click on Install starts.
 
 Cloud sessions run on **Linux, where the app doesn't compile**
 (AppKit/IOKit don't exist). The gate is CI on a macOS runner: universal
-build, `lipo -verify_arch`, `--selftest`, `plutil -lint` of the
+build, `lipo -verify_arch`, weak linking of the private classes,
+`--selftest` (it creates and removes the virtual display), `plutil -lint` of the
 watchdog, `cmp` of the bundled `LICENSE`. If you couldn't compile,
 **say so in the PR** instead of writing "tested".
 
