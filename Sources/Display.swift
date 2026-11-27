@@ -42,7 +42,7 @@ func setVirtualDisplay(_ on: Bool) {
     }
 }
 
-func makeVirtualDisplay() -> CGVirtualDisplay? {
+func makeVirtualDisplay(refreshRate: Double = 60) -> CGVirtualDisplay? {
     let desc = CGVirtualDisplayDescriptor()
     desc.queue = .main
     desc.name = "Decaffeinate"
@@ -55,6 +55,6 @@ func makeVirtualDisplay() -> CGVirtualDisplay? {
     guard let display = CGVirtualDisplay(descriptor: desc) else { return nil }
     let settings = CGVirtualDisplaySettings()
     settings.hiDPI = 0
-    settings.modes = [CGVirtualDisplayMode(width: UInt(virtualDisplayWidth), height: UInt(virtualDisplayHeight), refreshRate: 60)]
+    settings.modes = [CGVirtualDisplayMode(width: UInt(virtualDisplayWidth), height: UInt(virtualDisplayHeight), refreshRate: refreshRate)]
     return display.applySettings(settings) ? display : nil
 }

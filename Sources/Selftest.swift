@@ -42,6 +42,15 @@ func selftest() -> Never {
     precondition(virtualDisplayMillimeters == CGSize(width: 286, height: 179)) // a 13.3" panel: about 114 dpi, a 13-inch MacBook at 1x
     // The virtual display itself, on any Mac whose macOS has the private classes (CI included, lid or not):
     // it must come up at that size, read back as ours, never count as external, and leave nothing behind.
+    // PROBE (#42, removed before merge): which refresh rates macOS accepts for the virtual display.
+    if virtualDisplayClassesFound {
+        for rate in [60.0, 30, 20, 15, 10, 5, 2, 1] {
+            guard let d = makeVirtualDisplay(refreshRate: rate) else { print("probe \(rate) Hz: refused"); continue }
+            for _ in 0..<20 where CGDisplayIsOnline(d.displayID) == 0 { RunLoop.main.run(until: Date() + 0.1) }
+            let mode = CGDisplayCopyDisplayMode(d.displayID)
+            print("probe \(rate) Hz: reads back \(mode.map { $0.refreshRate } ?? -1) Hz, \(mode.map { "\($0.width)x\($0.height)" } ?? "no mode")")
+        }
+    }
     precondition(virtualDisplay == nil && displayAssertion == nil)
     if virtualDisplayClassesFound {
         setVirtualDisplay(true)
