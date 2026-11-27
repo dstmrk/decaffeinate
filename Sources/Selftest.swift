@@ -40,7 +40,7 @@ func selftest() -> Never {
     // Fixed at 1280×800 (#37): inside the range suggested for computer use, and cheap to composite.
     precondition(virtualDisplayWidth == 1280 && virtualDisplayHeight == 800)
     precondition(virtualDisplayMillimeters == CGSize(width: 286, height: 179)) // a 13.3" panel: about 114 dpi, a 13-inch MacBook at 1x
-    precondition(virtualDisplayRefreshRate == 30) // #42: an agent reads a frame every few seconds; 60 Hz cost 2.3 W
+    precondition(virtualDisplayRefreshRate == 1) // #42: an agent reads a frame every few seconds; 60 Hz cost 2.3 W
     // The virtual display itself, on any Mac whose macOS has the private classes (CI included, lid or not):
     // it must come up at that size and refresh rate, read back as ours, never count as external, and leave nothing
     // behind. A refusal fails too: with the classes present, it would mean the app's option does nothing.
