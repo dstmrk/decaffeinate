@@ -35,8 +35,31 @@ func selftest() -> Never {
     precondition(countsAsExternal(builtin: false, DisplayIdentity(vendor: 0xDECA, product: 1, serial: 0)))
     precondition(countsAsExternal(builtin: false, DisplayIdentity(vendor: 0x0610, product: 1, serial: 1)))
     precondition(countsAsExternal(builtin: false, DisplayIdentity(vendor: 0, product: 0, serial: 0))) // a dummy plug with an empty EDID
-    // The identity the virtual display will be created with: fixed, so macOS keeps one entry for it (#37).
+    // The identity the virtual display is created with: fixed, so macOS keeps one entry for it (#37).
     precondition(virtualDisplayIdentity == DisplayIdentity(vendor: 0xDECA, product: 1, serial: 1))
+    // Fixed at 1280×800 (#37): inside the range suggested for computer use, and cheap to composite.
+    precondition(virtualDisplayWidth == 1280 && virtualDisplayHeight == 800)
+    precondition(virtualDisplayMillimeters == CGSize(width: 286, height: 179)) // a 13.3" panel: about 114 dpi, a 13-inch MacBook at 1x
+    // The virtual display itself, on any Mac whose macOS has the private classes (CI included, lid or not):
+    // it must come up at that size, read back as ours, never count as external, and leave nothing behind.
+    precondition(virtualDisplay == nil && displayAssertion == nil)
+    if virtualDisplayClassesFound {
+        setVirtualDisplay(true)
+        if let id = virtualDisplay?.displayID {
+            for _ in 0..<20 where CGDisplayIsOnline(id) == 0 { RunLoop.main.run(until: Date() + 0.1) }
+            let read = DisplayIdentity(vendor: CGDisplayVendorNumber(id), product: CGDisplayModelNumber(id), serial: CGDisplaySerialNumber(id))
+            precondition(read == virtualDisplayIdentity, "virtual display reads back as \(read)")
+            precondition(!countsAsExternal(builtin: CGDisplayIsBuiltin(id) != 0, read))
+            precondition(CGDisplayPixelsWide(id) == virtualDisplayWidth && CGDisplayPixelsHigh(id) == virtualDisplayHeight)
+            precondition(displayAssertion != nil, "no display sleep assertion")
+            setVirtualDisplay(true) // idempotent: a second call while shown creates nothing
+            precondition(virtualDisplay?.displayID == id)
+        } else {
+            print("Virtual display: macOS refused to create one on this Mac.")
+        }
+        setVirtualDisplay(false)
+        precondition(virtualDisplay == nil && displayAssertion == nil)
+    }
     // isArmed: any one of these ends the stay-awake, so each must flip the result on its own.
     precondition(isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: false, awakeWhenLocked: false, sentToSleep: false))
     precondition(isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: true, awakeWhenLocked: true, sentToSleep: false))
@@ -125,6 +148,7 @@ func selftest() -> Never {
     precondition(run("/nonexistent", []) == "")
     print("Self-test passed.")
     print("This Mac: lid \(hasLid ? "yes" : "no"), external display \(externalDisplayActive() ? "yes" : "no"), power setting \(powerModeSettings()?.key ?? "none"), " +
+          "virtual display \(virtualDisplayClassesFound ? "available" : "unavailable"), " +
           "battery \(batteryPercent().map { "\($0)%" } ?? "on AC")")
     exit(0)
 }

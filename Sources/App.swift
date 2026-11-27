@@ -32,6 +32,9 @@ class App: NSObject, NSApplicationDelegate {
     // While armed, disablesleep 1 makes Apple menu › Sleep do nothing.
     let sleepItem = NSMenuItem(title: "Sleep now", action: #selector(sleepNow), keyEquivalent: "")
     let lockedItem = NSMenuItem(title: "Keep awake when screen locked", action: #selector(flipLocked), keyEquivalent: "")
+    // Off by default: the Mac stays unlocked behind the closed lid, so the title says so.
+    let virtualDisplayItem = NSMenuItem(title: "Virtual display when lid closed (Mac stays unlocked)",
+                                        action: #selector(flipVirtualDisplay), keyEquivalent: "")
     let loginItem = NSMenuItem(title: "Launch at login", action: #selector(flipLogin), keyEquivalent: "")
     let watchdogItem = NSMenuItem(title: "Crash protection is off, fix…", action: #selector(openLoginItems), keyEquivalent: "")
     let updateItem = NSMenuItem(title: "", action: #selector(installLatest), keyEquivalent: "")
@@ -45,6 +48,7 @@ class App: NSObject, NSApplicationDelegate {
     var sessionActive = true
     var awakeWhenLocked: Bool { UserDefaults.standard.object(forKey: "awakeWhenLocked") as? Bool ?? true }
     var screenLocked = false
+    var virtualDisplayOn: Bool { UserDefaults.standard.bool(forKey: "virtualDisplay") && virtualDisplayClassesFound }
     var wasClosed = false
     var sentToSleep = false // see isArmed; ends when the Mac is back out of a bag (lid open or desk setup)
     var deskMode = false // lid closed with an external display in use
@@ -70,9 +74,11 @@ class App: NSObject, NSApplicationDelegate {
         cutoffItem.submenu = cutoffs
         updateItem.image = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil)
         uninstallItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
+        virtualDisplayItem.toolTip = "For agents that work from screenshots. While the lid is closed the Mac doesn't lock: " +
+            "whoever opens the lid gets an unlocked Mac."
         // What changes the stay-awake or alerts about it stays on the first level; set-and-forget options go one level down.
         let settings = NSMenu()
-        [lowPowerItem, lockedItem, cutoffItem, loginItem, dailyUpdatesItem].forEach { $0.target = self; settings.addItem($0) }
+        [lowPowerItem, lockedItem, virtualDisplayItem, cutoffItem, loginItem, dailyUpdatesItem].forEach { $0.target = self; settings.addItem($0) }
         settings.addItem(.separator())
         [checkUpdatesItem, uninstallItem].forEach { $0.target = self; settings.addItem($0) }
         let settingsItem = NSMenuItem(title: "Settings", action: nil, keyEquivalent: "")
@@ -152,10 +158,10 @@ class App: NSObject, NSApplicationDelegate {
         // so while armed it also stops idle sleep with the lid open. Display sleep is unaffected.
         pmset(armed ? "-a disablesleep 1" : "-a disablesleep 0")
         if !armed { restorePowerMode() }
+        syncHold() // before a sleepnow: the virtual display goes first
         // Turning sleep back on while the lid is already shut doesn't sleep the Mac by itself.
         // Repeated while sentToSleep, so an event during the sleep (the screen locking) can't re-arm it.
         if !armed && (sentToSleep || wasClosed && !deskMode) { run("/usr/bin/pmset", ["sleepnow"]) }
-        syncHold()
         refreshUI()
     }
 
@@ -168,9 +174,10 @@ class App: NSObject, NSApplicationDelegate {
 
     @objc func sleepNow() { sendToSleep() }
 
-    // Keeps the watchdog's flag in step with what the Mac is doing.
+    // Keeps the watchdog's flag and the virtual display in step with what the Mac is doing.
     func syncHold() {
         let held = armed && wasClosed && !deskMode
+        setVirtualDisplay(held && virtualDisplayOn)
         guard held != heldClosed else { return }
         heldClosed = held
         if held { UserDefaults.standard.set(true, forKey: heldClosedKey) } else { UserDefaults.standard.removeObject(forKey: heldClosedKey) }
@@ -227,7 +234,7 @@ class App: NSObject, NSApplicationDelegate {
             if !closed || desk { sentToSleep = false } // see sendToSleep()
             if armed && closed && !desk {
                 if lowPower { lowPowerOn() }
-                run("/usr/bin/pmset", ["displaysleepnow"])
+                if !virtualDisplayOn { run("/usr/bin/pmset", ["displaysleepnow"]) } // syncHold() below puts it up instead
             } else if armed {
                 // Lid opened, or an external display took over while closed: back to normal.
                 restorePowerMode()
@@ -253,10 +260,13 @@ class App: NSObject, NSApplicationDelegate {
         item.button?.setAccessibilityLabel(armed ? "Decaffeinate: on" : "Decaffeinate: off")
         item.button?.toolTip = !armed ? "Lid close: sleep"
             : deskMode ? "Lid closed with an external display: normal desk use"
+            : virtualDisplayOn ? "Lid close: stay awake, low power, virtual display, no lock"
             : "Lid close: stay awake, low power, screen off"
         lowPowerItem.state = lowPower ? .on : .off
         lockedItem.state = awakeWhenLocked ? .on : .off
         lockedItem.isHidden = !hasLid
+        virtualDisplayItem.state = virtualDisplayOn ? .on : .off
+        virtualDisplayItem.isHidden = !hasLid || !virtualDisplayClassesFound
         cutoffItem.title = "Sleep when battery below: \(cutoffTitle(minBatteryPercent))"
         cutoffItem.submenu?.items.forEach { $0.state = $0.tag == minBatteryPercent ? .on : .off }
         sleepItem.isHidden = !armed
@@ -361,6 +371,11 @@ class App: NSObject, NSApplicationDelegate {
 
     @objc func flipLocked() {
         UserDefaults.standard.set(!awakeWhenLocked, forKey: "awakeWhenLocked")
+        apply()
+    }
+
+    @objc func flipVirtualDisplay() {
+        UserDefaults.standard.set(!UserDefaults.standard.bool(forKey: "virtualDisplay"), forKey: "virtualDisplay")
         apply()
     }
 

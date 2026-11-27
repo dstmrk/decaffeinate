@@ -68,6 +68,13 @@ jobs:
           ./build.sh
       - name: Check both architectures
         run: lipo "$HOME/Applications/Decaffeinate.app/Contents/MacOS/Decaffeinate" -verify_arch arm64 x86_64
+      # A strong reference to a private class would stop the app from launching on a macOS that drops it.
+      - name: Check private classes are weak-linked
+        run: |
+          BIN="$HOME/Applications/Decaffeinate.app/Contents/MacOS/Decaffeinate"
+          refs=$(for a in arm64 x86_64; do nm -m -arch $a "$BIN"; done | grep 'CGVirtualDisplay' || true)
+          echo "$refs"
+          if grep -v 'weak external' <<< "$refs" | grep -q .; then echo "::error::CGVirtualDisplay referenced without weak linking"; exit 1; fi
       - name: Self-test
         timeout-minutes: 2 # a hang (e.g. a blocked pipe in run()) fails fast
         run: '"$HOME/Applications/Decaffeinate.app/Contents/MacOS/Decaffeinate" --selftest'

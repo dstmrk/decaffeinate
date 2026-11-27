@@ -11,8 +11,10 @@ VERSION=${VERSION:-$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')}
 VERSION=${VERSION:-0.0.0}
 TMP=$(mktemp -d)
 # Every file in Sources/ is one module; main.swift holds the top-level code.
-swiftc -O -target arm64-apple-macos$MIN Sources/*.swift -o "$TMP/arm64"
-swiftc -O -target x86_64-apple-macos$MIN Sources/*.swift -o "$TMP/x86_64"
+# The header declares the private CGVirtualDisplay classes, which no SDK header has.
+H=Sources/CGVirtualDisplay.h
+swiftc -O -target arm64-apple-macos$MIN -import-objc-header "$H" Sources/*.swift -o "$TMP/arm64"
+swiftc -O -target x86_64-apple-macos$MIN -import-objc-header "$H" Sources/*.swift -o "$TMP/x86_64"
 lipo -create "$TMP/arm64" "$TMP/x86_64" -output "$APP/Contents/MacOS/Decaffeinate"
 rm -rf "$TMP"
 mkdir -p "$APP/Contents/Resources"
