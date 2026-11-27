@@ -17,7 +17,7 @@ func countsAsExternal(builtin: Bool, _ id: DisplayIdentity) -> Bool { !builtin &
 let virtualDisplayWidth = 1280, virtualDisplayHeight = 800
 let virtualDisplayMillimeters = CGSize(width: 286, height: 179)
 // Low on purpose (#42): an agent takes a screenshot every few seconds, and each frame costs power.
-let virtualDisplayRefreshRate = 1.0
+let virtualDisplayRefreshRate = 30.0
 
 // A resilience fallback: a future macOS may drop the private classes. They are weak-linked, so the app runs either way.
 let virtualDisplayClassesFound = ["CGVirtualDisplay", "CGVirtualDisplayDescriptor", "CGVirtualDisplaySettings", "CGVirtualDisplayMode"]
