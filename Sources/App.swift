@@ -32,9 +32,8 @@ class App: NSObject, NSApplicationDelegate {
     // While armed, disablesleep 1 makes Apple menu › Sleep do nothing.
     let sleepItem = NSMenuItem(title: "Sleep now", action: #selector(sleepNow), keyEquivalent: "")
     let lockedItem = NSMenuItem(title: "Keep awake when screen locked", action: #selector(flipLocked), keyEquivalent: "")
-    // Off by default: the Mac stays unlocked behind the closed lid, so the title says so.
-    let virtualDisplayItem = NSMenuItem(title: "Virtual display when lid closed (Mac stays unlocked)",
-                                        action: #selector(flipVirtualDisplay), keyEquivalent: "")
+    // Off by default: the Mac doesn't lock behind the closed lid, so the title says so (the tooltip explains).
+    let virtualDisplayItem = NSMenuItem(title: "Virtual display when lid closed (no lock)", action: #selector(flipVirtualDisplay), keyEquivalent: "")
     let loginItem = NSMenuItem(title: "Launch at login", action: #selector(flipLogin), keyEquivalent: "")
     let watchdogItem = NSMenuItem(title: "Crash protection is off, fix…", action: #selector(openLoginItems), keyEquivalent: "")
     let updateItem = NSMenuItem(title: "", action: #selector(installLatest), keyEquivalent: "")
