@@ -34,12 +34,24 @@ func isArmed(enabled: Bool, sessionActive: Bool, hasLid: Bool, screenLocked: Boo
     enabled && sessionActive && hasLid && !(screenLocked && !awakeWhenLocked) && !sentToSleep
 }
 
+// The numbers a display reports for itself (from its EDID, or set by whoever created a virtual one).
+struct DisplayIdentity: Equatable { let vendor, product, serial: UInt32 }
+
+// Decaffeinate's own virtual display (#37). Fixed, so macOS keeps a single entry for it.
+// 0xDECA has the top bit set, which EDID reserves as 0 in a vendor ID: no real display reports it.
+let virtualDisplayIdentity = DisplayIdentity(vendor: 0xDECA, product: 1, serial: 1)
+
+func countsAsExternal(builtin: Bool, _ id: DisplayIdentity) -> Bool { !builtin && id != virtualDisplayIdentity }
+
 // True when an external display is in use. With the lid closed that's a normal desk setup
 // (clamshell mode), so Decaffeinate leaves the displays and power mode alone.
 func externalDisplayActive() -> Bool {
     var ids = [CGDirectDisplayID](repeating: 0, count: 16), count: UInt32 = 0
     guard CGGetActiveDisplayList(16, &ids, &count) == .success else { return false }
-    return ids.prefix(Int(count)).contains { CGDisplayIsBuiltin($0) == 0 }
+    return ids.prefix(Int(count)).contains {
+        countsAsExternal(builtin: CGDisplayIsBuiltin($0) != 0,
+                         DisplayIdentity(vendor: CGDisplayVendorNumber($0), product: CGDisplayModelNumber($0), serial: CGDisplaySerialNumber($0)))
+    }
 }
 
 // Current Low Power Mode setting per power source, e.g. ["-b": 1, "-c": 0], from `pmset -g custom`.
