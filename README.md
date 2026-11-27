@@ -17,6 +17,8 @@ It keeps working behind the lock screen. Log out or switch users, and closing th
 
 An agent that works from screenshots (computer use) sees nothing once the lid closes: macOS has no active display left. Turn on **Settings › Virtual display when lid closed** (off by default) and Decaffeinate gives it a 1280×800 virtual display instead of turning the screen off, and keeps that display from sleeping. The trade-off: the Mac never locks while the lid is closed, so whoever opens it gets an unlocked Mac. The display goes away when the lid opens and on every path that ends the stay-awake. The option is hidden if your macOS doesn't offer virtual displays.
 
+It costs battery: on a MacBook Air on battery with the lid closed, the whole Mac drew 0.45 W with the option off and 2.7 W with it on (`measure.sh`, 15 minutes each), so a closed Mac lasts hours instead of days.
+
 It makes no network requests unless you ask for an update check: **Check for updates…** checks once, **Check for updates daily** (off by default) checks once a day. Each is one anonymous request for this repository's latest GitHub release; nothing about your Mac is sent. A newer version appears at the top of the menu as **Install Decaffeinate x.y.z**: one click downloads it from the GitHub release, replaces the app in place and reopens it, with no trip through System Settings. Decaffeinate never downloads or installs anything unless you click. If it can't replace itself (it runs from the dmg, or you can't write to its folder), it offers the release page instead.
 
 | | Measured upstream¹ |
