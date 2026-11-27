@@ -40,17 +40,10 @@ func selftest() -> Never {
     // Fixed at 1280×800 (#37): inside the range suggested for computer use, and cheap to composite.
     precondition(virtualDisplayWidth == 1280 && virtualDisplayHeight == 800)
     precondition(virtualDisplayMillimeters == CGSize(width: 286, height: 179)) // a 13.3" panel: about 114 dpi, a 13-inch MacBook at 1x
+    precondition(virtualDisplayRefreshRate == 30) // #42: an agent reads a frame every few seconds; 60 Hz cost 2.3 W
     // The virtual display itself, on any Mac whose macOS has the private classes (CI included, lid or not):
-    // it must come up at that size, read back as ours, never count as external, and leave nothing behind.
-    // PROBE (#42, removed before merge): which refresh rates macOS accepts for the virtual display.
-    if virtualDisplayClassesFound {
-        for rate in [60.0, 30, 20, 15, 10, 5, 2, 1] {
-            guard let d = makeVirtualDisplay(refreshRate: rate) else { print("probe \(rate) Hz: refused"); continue }
-            for _ in 0..<20 where CGDisplayIsOnline(d.displayID) == 0 { RunLoop.main.run(until: Date() + 0.1) }
-            let mode = CGDisplayCopyDisplayMode(d.displayID)
-            print("probe \(rate) Hz: reads back \(mode.map { $0.refreshRate } ?? -1) Hz, \(mode.map { "\($0.width)x\($0.height)" } ?? "no mode")")
-        }
-    }
+    // it must come up at that size and refresh rate, read back as ours, never count as external, and leave nothing
+    // behind. A refusal fails too: with the classes present, it would mean the app's option does nothing.
     precondition(virtualDisplay == nil && displayAssertion == nil)
     if virtualDisplayClassesFound {
         setVirtualDisplay(true)
@@ -60,11 +53,13 @@ func selftest() -> Never {
             precondition(read == virtualDisplayIdentity, "virtual display reads back as \(read)")
             precondition(!countsAsExternal(builtin: CGDisplayIsBuiltin(id) != 0, read))
             precondition(CGDisplayPixelsWide(id) == virtualDisplayWidth && CGDisplayPixelsHigh(id) == virtualDisplayHeight)
+            let rate = CGDisplayCopyDisplayMode(id)?.refreshRate
+            precondition(rate == virtualDisplayRefreshRate, "virtual display runs at \(rate.map { "\($0)" } ?? "no mode") Hz")
             precondition(displayAssertion != nil, "no display sleep assertion")
             setVirtualDisplay(true) // idempotent: a second call while shown creates nothing
             precondition(virtualDisplay?.displayID == id)
         } else {
-            print("Virtual display: macOS refused to create one on this Mac.")
+            preconditionFailure("macOS refused the virtual display")
         }
         setVirtualDisplay(false)
         precondition(virtualDisplay == nil && displayAssertion == nil)

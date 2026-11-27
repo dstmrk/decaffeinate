@@ -16,6 +16,8 @@ func countsAsExternal(builtin: Bool, _ id: DisplayIdentity) -> Bool { !builtin &
 
 let virtualDisplayWidth = 1280, virtualDisplayHeight = 800
 let virtualDisplayMillimeters = CGSize(width: 286, height: 179)
+// Low on purpose (#42): an agent takes a screenshot every few seconds, and each frame costs power.
+let virtualDisplayRefreshRate = 30.0
 
 // A resilience fallback: a future macOS may drop the private classes. They are weak-linked, so the app runs either way.
 let virtualDisplayClassesFound = ["CGVirtualDisplay", "CGVirtualDisplayDescriptor", "CGVirtualDisplaySettings", "CGVirtualDisplayMode"]
@@ -42,7 +44,7 @@ func setVirtualDisplay(_ on: Bool) {
     }
 }
 
-func makeVirtualDisplay(refreshRate: Double = 60) -> CGVirtualDisplay? {
+func makeVirtualDisplay() -> CGVirtualDisplay? {
     let desc = CGVirtualDisplayDescriptor()
     desc.queue = .main
     desc.name = "Decaffeinate"
@@ -55,6 +57,6 @@ func makeVirtualDisplay(refreshRate: Double = 60) -> CGVirtualDisplay? {
     guard let display = CGVirtualDisplay(descriptor: desc) else { return nil }
     let settings = CGVirtualDisplaySettings()
     settings.hiDPI = 0
-    settings.modes = [CGVirtualDisplayMode(width: UInt(virtualDisplayWidth), height: UInt(virtualDisplayHeight), refreshRate: refreshRate)]
+    settings.modes = [CGVirtualDisplayMode(width: UInt(virtualDisplayWidth), height: UInt(virtualDisplayHeight), refreshRate: virtualDisplayRefreshRate)]
     return display.applySettings(settings) ? display : nil
 }
