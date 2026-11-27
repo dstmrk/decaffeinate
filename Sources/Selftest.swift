@@ -24,6 +24,19 @@ func selftest() -> Never {
     precondition(powerModeSettings("AC Power:\n powermode 2\n")! == ("powermode", ["-c": 2]))
     precondition(powerModeSettings("AC Power:\n sleep 1\n") == nil)
     precondition(pmsetCmds.contains("-b lowpowermode 1") && pmsetCmds.contains("-c powermode 2"))
+    // countsAsExternal: only a real external display means desk mode; Decaffeinate's own virtual display must not disarm it.
+    let monitor = DisplayIdentity(vendor: 0x10AC, product: 0xA0C4, serial: 0x4C4C)
+    precondition(countsAsExternal(builtin: false, monitor))
+    precondition(!countsAsExternal(builtin: true, monitor))
+    precondition(!countsAsExternal(builtin: false, virtualDisplayIdentity))
+    precondition(!countsAsExternal(builtin: true, virtualDisplayIdentity))
+    // Only the exact identity is ours: a display sharing one or two of its numbers is someone else's.
+    precondition(countsAsExternal(builtin: false, DisplayIdentity(vendor: 0xDECA, product: 2, serial: 1)))
+    precondition(countsAsExternal(builtin: false, DisplayIdentity(vendor: 0xDECA, product: 1, serial: 0)))
+    precondition(countsAsExternal(builtin: false, DisplayIdentity(vendor: 0x0610, product: 1, serial: 1)))
+    precondition(countsAsExternal(builtin: false, DisplayIdentity(vendor: 0, product: 0, serial: 0))) // a dummy plug with an empty EDID
+    // The identity the virtual display will be created with: fixed, so macOS keeps one entry for it (#37).
+    precondition(virtualDisplayIdentity == DisplayIdentity(vendor: 0xDECA, product: 1, serial: 1))
     // isArmed: any one of these ends the stay-awake, so each must flip the result on its own.
     precondition(isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: false, awakeWhenLocked: false, sentToSleep: false))
     precondition(isArmed(enabled: true, sessionActive: true, hasLid: true, screenLocked: true, awakeWhenLocked: true, sentToSleep: false))
