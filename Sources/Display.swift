@@ -4,6 +4,7 @@ import IOKit.pwr_mgt
 // The optional virtual display while the lid is closed (#37), for agents that work from screenshots: with the lid
 // shut and no external display, macOS has no active display and every screenshot is empty. An assertion keeps it
 // from sleeping, which also keeps the screen from locking. Both die with the process, so a crash needs no handling.
+// The assertion is what costs power (#42): about 2.3 W on a MacBook Air, the same with or without the display.
 
 // The numbers a display reports for itself (from its EDID, or set by whoever created a virtual one).
 struct DisplayIdentity: Equatable { let vendor, product, serial: UInt32 }
@@ -16,7 +17,8 @@ func countsAsExternal(builtin: Bool, _ id: DisplayIdentity) -> Bool { !builtin &
 
 let virtualDisplayWidth = 1280, virtualDisplayHeight = 800
 let virtualDisplayMillimeters = CGSize(width: 286, height: 179)
-// Low on purpose (#42): an agent takes a screenshot every few seconds, and each frame costs power.
+// An agent takes a screenshot every few seconds. Measured against 60 Hz, 30 saves nothing measurable (#42); macOS
+// refuses 1 Hz.
 let virtualDisplayRefreshRate = 30.0
 
 // A resilience fallback: a future macOS may drop the private classes. They are weak-linked, so the app runs either way.

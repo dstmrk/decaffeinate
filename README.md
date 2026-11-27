@@ -2,7 +2,7 @@
 
 A tiny macOS menu bar app that keeps a MacBook awake with the lid closed, so long-running jobs (AI coding agents, builds) keep working on a fraction of the power.
 
-Decaffeinate is a fork of [Pilot Light](https://github.com/CyrisXD/pilot-light) by [sudolabs](https://pilotlight.sudolabs.nz). The idea, the original design and the measurements below are theirs. This fork has since restructured the code into separate modules, fixed bugs and simplified setup for non-technical users. It has its own minimal page ([decaffeinate-app.pages.dev](https://decaffeinate-app.pages.dev), source in [`site/`](site)), and its update check looks for this fork's releases.
+Decaffeinate is a fork of [Pilot Light](https://github.com/CyrisXD/pilot-light) by [sudolabs](https://pilotlight.sudolabs.nz). The idea, the original design and the measurements below are theirs. This fork has since restructured the code into separate modules, fixed bugs, simplified setup for non-technical users and added one-click updates and a virtual display for agents. It has its own minimal page ([decaffeinate-app.pages.dev](https://decaffeinate-app.pages.dev), source in [`site/`](site)), and its update check looks for this fork's releases.
 
 ## What it does
 
@@ -17,7 +17,7 @@ It keeps working behind the lock screen. Log out or switch users, and closing th
 
 An agent that works from screenshots (computer use) sees nothing once the lid closes: macOS has no active display left. Turn on **Settings › Virtual display when lid closed** (off by default) and Decaffeinate gives it a 1280×800 virtual display instead of turning the screen off, and keeps that display from sleeping. The trade-off: the Mac never locks while the lid is closed, so whoever opens it gets an unlocked Mac. The display goes away when the lid opens and on every path that ends the stay-awake. The option is hidden if your macOS doesn't offer virtual displays.
 
-It costs battery: on a MacBook Air on battery with the lid closed, the whole Mac drew 0.45 W with the option off and 2.7 W with it on (`measure.sh`, 15 minutes each), so a closed Mac lasts hours instead of days.
+It costs battery: on a MacBook Air on battery with the lid closed, the whole Mac drew 0.45 W with the option off and about 2.6 W with it on (`measure.sh`, 15 minutes each), so a closed Mac lasts hours instead of days. The cost is keeping a display awake, not the virtual display itself: the same display-sleep assertion with no virtual display at all drew the same, and halving the refresh rate changed nothing measurable.
 
 It makes no network requests unless you ask for an update check: **Check for updates…** checks once, **Check for updates daily** (off by default) checks once a day. Each is one anonymous request for this repository's latest GitHub release; nothing about your Mac is sent. A newer version appears at the top of the menu as **Install Decaffeinate x.y.z**: one click downloads it from the GitHub release, replaces the app in place and reopens it, with no trip through System Settings. Decaffeinate never downloads or installs anything unless you click. If it can't replace itself (it runs from the dmg, or you can't write to its folder), it offers the release page instead.
 
@@ -81,4 +81,4 @@ Choose **Settings › Uninstall…** from the menu. Decaffeinate turns lid-close
 
 ## Credits and license
 
-MIT. Original work © 2026 sudolabs ([Pilot Light](https://github.com/CyrisXD/pilot-light)); see [LICENSE](LICENSE), which the app bundle also carries in `Contents/Resources/`. The cup icon is [Lucide](https://lucide.dev)'s "coffee" (ISC). If the app is useful to you, you can support this fork on [Ko-fi](https://ko-fi.com/dstmrk) or [sponsor the original author](https://github.com/sponsors/CyrisXD).
+MIT. Original work © 2026 sudolabs ([Pilot Light](https://github.com/CyrisXD/pilot-light)); see [LICENSE](LICENSE), which the app bundle also carries in `Contents/Resources/`. The cup icon is [Lucide](https://lucide.dev)'s "coffee" (ISC). If the app is useful to you, you can support it on [Ko-fi](https://ko-fi.com/dstmrk).

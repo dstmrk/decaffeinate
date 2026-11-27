@@ -324,7 +324,11 @@ footer a{color:var(--ink);font-weight:500}
       </details>
       <details>
         <summary>How much battery does it use?</summary>
-        <p>Pilot Light's measurements on an M5 Max MacBook Pro: 4.8 W with the lid closed against 16.7 W open, which is about 20 hours instead of 6. Heavy builds draw more.</p>
+        <p>Very little while the Mac only waits: about 0.45 W for the whole MacBook Air we measured, lid closed, on battery. Pilot Light measured an M5 Max MacBook Pro at 4.8 W lid closed against 16.7 W open, about 20 hours instead of 6. Whatever your agents and builds run comes on top.</p>
+      </details>
+      <details>
+        <summary>Can an agent still see the screen with the lid closed?</summary>
+        <p>Yes, if you ask for it. With the lid shut macOS has no display left, so agents that work from screenshots see nothing. Turn on <b>Settings › Virtual display when lid closed (no lock)</b>: Decaffeinate gives them a 1280×800 virtual display and keeps it awake. Two costs. The Mac doesn't lock while the lid is closed, so whoever opens it gets an unlocked Mac. And an awake display draws more: about 2.6 W instead of 0.45 W on that MacBook Air. It's off by default, and the display goes away when you open the lid.</p>
       </details>
       <details>
         <summary>Does it send any data?</summary>
@@ -340,7 +344,7 @@ footer a{color:var(--ink);font-weight:500}
 
 <footer>
   <div class="wrap">
-    <p>Decaffeinate is a fork of <a href="https://github.com/CyrisXD/pilot-light">Pilot Light</a> by sudolabs (MIT). The idea and the original design are theirs; this fork restructured the code, fixed bugs and simplified setup. If you find it useful, <a href="https://ko-fi.com/dstmrk">support this fork on Ko-fi</a> or <a href="https://github.com/sponsors/CyrisXD">sponsor the original author</a>.</p>
+    <p>Decaffeinate is a fork of <a href="https://github.com/CyrisXD/pilot-light">Pilot Light</a> by sudolabs (MIT). The idea and the original design are theirs; this fork restructured the code, fixed bugs, simplified setup and added one-click updates and a virtual display for agents. If you find it useful, <a href="https://ko-fi.com/dstmrk">support it on Ko-fi</a>.</p>
     <p><a href="https://github.com/dstmrk/decaffeinate">Source</a> · <a href="https://github.com/dstmrk/decaffeinate/releases">Releases</a> · <a href="https://github.com/dstmrk/decaffeinate/blob/main/LICENSE">MIT license</a></p>
   </div>
 </footer>
