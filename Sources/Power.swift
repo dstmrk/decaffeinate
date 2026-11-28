@@ -30,8 +30,8 @@ let hasLid = lidClosed() != nil
 
 // Whether Decaffeinate should hold the Mac awake right now. Every false here must lead to `disablesleep 0`.
 // sentToSleep: Decaffeinate put the Mac to sleep (a safety cutoff, or Sleep now) and it hasn't come back yet.
-func isArmed(enabled: Bool, sessionActive: Bool, hasLid: Bool, screenLocked: Bool, awakeWhenLocked: Bool, sentToSleep: Bool) -> Bool {
-    enabled && sessionActive && hasLid && !(screenLocked && !awakeWhenLocked) && !sentToSleep
+func isArmed(sessionActive: Bool, hasLid: Bool, screenLocked: Bool, awakeWhenLocked: Bool, sentToSleep: Bool) -> Bool {
+    sessionActive && hasLid && !(screenLocked && !awakeWhenLocked) && !sentToSleep
 }
 
 // True when an external display is in use. With the lid closed that's a normal desk setup

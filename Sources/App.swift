@@ -25,7 +25,8 @@ let glyphs: [String: NSImage] = glyphSVG.mapValues { body in
 
 class App: NSObject, NSApplicationDelegate {
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-    let toggle = NSMenuItem(title: "Keep awake when lid closed", action: #selector(flip), keyEquivalent: "")
+    // Shown only on a Mac without a lid. There is no on/off item: running is on, Quit is off.
+    let noLidItem = NSMenuItem(title: "This Mac has no lid, nothing to do", action: nil, keyEquivalent: "")
     let uninstallItem = NSMenuItem(title: "Uninstall…", action: #selector(uninstall), keyEquivalent: "")
     let lowPowerItem = NSMenuItem(title: "Low Power Mode when lid closed", action: #selector(flipLowPower), keyEquivalent: "")
     let cutoffItem = NSMenuItem(title: "Sleep when battery below", action: nil, keyEquivalent: "")
@@ -43,7 +44,6 @@ class App: NSObject, NSApplicationDelegate {
     var latestVersion: String? // set when a check found a newer release
     var updating = false // downloading it
     var lowPower: Bool { UserDefaults.standard.object(forKey: "lowPower") as? Bool ?? true }
-    var enabled = UserDefaults.standard.object(forKey: "enabled") as? Bool ?? true
     var sessionActive = true
     var awakeWhenLocked: Bool { UserDefaults.standard.object(forKey: "awakeWhenLocked") as? Bool ?? true }
     var screenLocked = false
@@ -55,7 +55,7 @@ class App: NSObject, NSApplicationDelegate {
     var installing = false
 
     var armed: Bool {
-        isArmed(enabled: enabled, sessionActive: sessionActive, hasLid: hasLid, screenLocked: screenLocked,
+        isArmed(sessionActive: sessionActive, hasLid: hasLid, screenLocked: screenLocked,
                 awakeWhenLocked: awakeWhenLocked, sentToSleep: sentToSleep)
     }
     let powerKey = powerModeSettings()?.key
@@ -82,7 +82,7 @@ class App: NSObject, NSApplicationDelegate {
         [checkUpdatesItem, uninstallItem].forEach { $0.target = self; settings.addItem($0) }
         let settingsItem = NSMenuItem(title: "Settings", action: nil, keyEquivalent: "")
         settingsItem.submenu = settings
-        [watchdogItem, updateItem, toggle, sleepItem].forEach { $0.target = self; menu.addItem($0) }
+        [watchdogItem, updateItem, noLidItem, sleepItem].forEach { $0.target = self; menu.addItem($0) }
         menu.addItem(settingsItem)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApp.terminate), keyEquivalent: "q"))
@@ -251,9 +251,7 @@ class App: NSObject, NSApplicationDelegate {
     }
 
     func refreshUI() {
-        toggle.state = enabled && hasLid ? .on : .off
-        toggle.isEnabled = hasLid
-        toggle.title = hasLid ? "Keep awake when lid closed" : "This Mac has no lid, nothing to do"
+        noLidItem.isHidden = hasLid
         lowPowerItem.isHidden = powerKey == nil || !hasLid
         item.button?.image = glyphs[armed ? "active" : "disabled"]
         item.button?.setAccessibilityLabel(armed ? "Decaffeinate: on" : "Decaffeinate: off")
@@ -392,13 +390,6 @@ class App: NSObject, NSApplicationDelegate {
         }
         if svc.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
         refreshUI()
-    }
-
-    @objc func flip() {
-        enabled.toggle()
-        sentToSleep = false // a way out if a Sleep now never slept
-        UserDefaults.standard.set(enabled, forKey: "enabled")
-        apply()
     }
 
     // Explains the rule before the admin prompt. False if declined or the install failed.
