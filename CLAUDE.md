@@ -59,8 +59,8 @@ download that a click on Install starts.
 
 - **The Mac never stays awake unattended.** This is the product's
   safety invariant: every path that sets `disablesleep 1` has a path
-  that sets it back to `0` (quit, logout/shutdown, screen lock when the
-  option is off, heat/battery cutoff, the watchdog after a crash,
+  that sets it back to `0` (quit, logout/shutdown, Sleep now,
+  heat/battery cutoff, the watchdog after a crash,
   `restorePowerMode()` at launch). A change that adds an armed state
   also adds its restore, and a selftest case.
 - **Simple now, never provisional.** The simplest implementation that

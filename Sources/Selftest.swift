@@ -65,14 +65,11 @@ func selftest() -> Never {
         precondition(virtualDisplay == nil && displayAssertion == nil)
     }
     // isArmed: any one of these ends the stay-awake, so each must flip the result on its own.
-    precondition(isArmed(sessionActive: true, hasLid: true, screenLocked: false, awakeWhenLocked: false, sentToSleep: false))
-    precondition(isArmed(sessionActive: true, hasLid: true, screenLocked: true, awakeWhenLocked: true, sentToSleep: false))
-    precondition(!isArmed(sessionActive: false, hasLid: true, screenLocked: false, awakeWhenLocked: true, sentToSleep: false)) // fast user switch
-    precondition(!isArmed(sessionActive: true, hasLid: false, screenLocked: false, awakeWhenLocked: true, sentToSleep: false)) // Mac mini, iMac
-    precondition(!isArmed(sessionActive: true, hasLid: true, screenLocked: true, awakeWhenLocked: false, sentToSleep: false))
-    // A cutoff or Sleep now: the screen locking on the way down (awakeWhenLocked on) must not re-arm it.
-    precondition(!isArmed(sessionActive: true, hasLid: true, screenLocked: true, awakeWhenLocked: true, sentToSleep: true))
-    precondition(!isArmed(sessionActive: true, hasLid: true, screenLocked: false, awakeWhenLocked: true, sentToSleep: true))
+    // A locked screen is not an input: the Mac keeps working behind the lock screen.
+    precondition(isArmed(sessionActive: true, hasLid: true, sentToSleep: false))
+    precondition(!isArmed(sessionActive: false, hasLid: true, sentToSleep: false)) // fast user switch
+    precondition(!isArmed(sessionActive: true, hasLid: false, sentToSleep: false)) // Mac mini, iMac
+    precondition(!isArmed(sessionActive: true, hasLid: true, sentToSleep: true)) // a cutoff or Sleep now
     // sudoersRule: one line, only whitelisted pmset commands, no wildcard.
     let bobRule = sudoersRule(user: "bob")
     precondition(bobRule.hasPrefix("bob ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 0, ") && bobRule.hasSuffix("\n"))

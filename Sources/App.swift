@@ -32,7 +32,6 @@ class App: NSObject, NSApplicationDelegate {
     let cutoffItem = NSMenuItem(title: "Sleep when battery below", action: nil, keyEquivalent: "")
     // While armed, disablesleep 1 makes Apple menu › Sleep do nothing.
     let sleepItem = NSMenuItem(title: "Sleep now", action: #selector(sleepNow), keyEquivalent: "")
-    let lockedItem = NSMenuItem(title: "Keep awake when screen locked", action: #selector(flipLocked), keyEquivalent: "")
     // Off by default: the Mac doesn't lock behind the closed lid, so the title says so (the tooltip explains).
     let virtualDisplayItem = NSMenuItem(title: "Virtual display when lid closed (no lock)", action: #selector(flipVirtualDisplay), keyEquivalent: "")
     let loginItem = NSMenuItem(title: "Launch at login", action: #selector(flipLogin), keyEquivalent: "")
@@ -45,8 +44,6 @@ class App: NSObject, NSApplicationDelegate {
     var updating = false // downloading it
     var lowPower: Bool { UserDefaults.standard.object(forKey: "lowPower") as? Bool ?? true }
     var sessionActive = true
-    var awakeWhenLocked: Bool { UserDefaults.standard.object(forKey: "awakeWhenLocked") as? Bool ?? true }
-    var screenLocked = false
     var virtualDisplayOn: Bool { UserDefaults.standard.bool(forKey: "virtualDisplay") && virtualDisplayClassesFound }
     var wasClosed = false
     var sentToSleep = false // see isArmed; ends when the Mac is back out of a bag (lid open or desk setup)
@@ -55,8 +52,7 @@ class App: NSObject, NSApplicationDelegate {
     var installing = false
 
     var armed: Bool {
-        isArmed(sessionActive: sessionActive, hasLid: hasLid, screenLocked: screenLocked,
-                awakeWhenLocked: awakeWhenLocked, sentToSleep: sentToSleep)
+        isArmed(sessionActive: sessionActive, hasLid: hasLid, sentToSleep: sentToSleep)
     }
     let powerKey = powerModeSettings()?.key
 
@@ -77,7 +73,7 @@ class App: NSObject, NSApplicationDelegate {
             "whoever opens the lid gets an unlocked Mac."
         // What changes the stay-awake or alerts about it stays on the first level; set-and-forget options go one level down.
         let settings = NSMenu()
-        [lowPowerItem, lockedItem, virtualDisplayItem, cutoffItem, loginItem, dailyUpdatesItem].forEach { $0.target = self; settings.addItem($0) }
+        [lowPowerItem, virtualDisplayItem, cutoffItem, loginItem, dailyUpdatesItem].forEach { $0.target = self; settings.addItem($0) }
         settings.addItem(.separator())
         [checkUpdatesItem, uninstallItem].forEach { $0.target = self; settings.addItem($0) }
         let settingsItem = NSMenuItem(title: "Settings", action: nil, keyEquivalent: "")
@@ -94,15 +90,6 @@ class App: NSObject, NSApplicationDelegate {
         }
         ws.addObserver(forName: NSWorkspace.sessionDidBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             self?.sessionActive = true; self?.apply()
-        }
-        // With "Keep awake when screen locked" off, any lock (yours, or the automatic one after the display
-        // turns off) ends the stay-awake.
-        let dn = DistributedNotificationCenter.default()
-        dn.addObserver(forName: .init("com.apple.screenIsLocked"), object: nil, queue: .main) { [weak self] _ in
-            self?.screenLocked = true; self?.apply()
-        }
-        dn.addObserver(forName: .init("com.apple.screenIsUnlocked"), object: nil, queue: .main) { [weak self] _ in
-            self?.screenLocked = false; self?.apply()
         }
         // Posted on logout/shutdown/restart.
         ws.addObserver(forName: NSWorkspace.willPowerOffNotification, object: nil, queue: .main) { _ in restore() }
@@ -159,7 +146,7 @@ class App: NSObject, NSApplicationDelegate {
         if !armed { restorePowerMode() }
         syncHold() // before a sleepnow: the virtual display goes first
         // Turning sleep back on while the lid is already shut doesn't sleep the Mac by itself.
-        // Repeated while sentToSleep, so an event during the sleep (the screen locking) can't re-arm it.
+        // Repeated while sentToSleep, so an event during the sleep (a session change) can't re-arm it.
         if !armed && (sentToSleep || wasClosed && !deskMode) { run("/usr/bin/pmset", ["sleepnow"]) }
         refreshUI()
     }
@@ -260,8 +247,6 @@ class App: NSObject, NSApplicationDelegate {
             : virtualDisplayOn ? "Lid close: stay awake, low power, virtual display, no lock"
             : "Lid close: stay awake, low power, screen off"
         lowPowerItem.state = lowPower ? .on : .off
-        lockedItem.state = awakeWhenLocked ? .on : .off
-        lockedItem.isHidden = !hasLid
         virtualDisplayItem.state = virtualDisplayOn ? .on : .off
         virtualDisplayItem.isHidden = !hasLid || !virtualDisplayClassesFound
         cutoffItem.title = "Sleep when battery below: \(cutoffTitle(minBatteryPercent))"
@@ -364,11 +349,6 @@ class App: NSObject, NSApplicationDelegate {
     @objc func flipLowPower() {
         UserDefaults.standard.set(!lowPower, forKey: "lowPower")
         refreshUI()
-    }
-
-    @objc func flipLocked() {
-        UserDefaults.standard.set(!awakeWhenLocked, forKey: "awakeWhenLocked")
-        apply()
     }
 
     @objc func flipVirtualDisplay() {

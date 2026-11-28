@@ -13,7 +13,7 @@ When the lid closes while you're logged in, Decaffeinate:
 - turns the display off,
 - lets the Mac sleep anyway when it gets hot: on battery as soon as it runs warm, since a closed MacBook in a bag can't cool down; on power only once macOS starts slowing it down, so long builds on a desk can finish. It also sleeps when the battery drops below your limit (20% by default, set under **Settings**).
 
-It keeps working behind the lock screen. Log out or switch users, and closing the lid sleeps the Mac as normal. Turn off **Keep awake when screen locked** and it also sleeps once the screen locks. With an external display connected, a closed lid is treated as a normal desk setup and left alone.
+It keeps working behind the lock screen. Log out or switch users, and closing the lid sleeps the Mac as normal. To let it sleep, quit Decaffeinate or use **Sleep now**. With an external display connected, a closed lid is treated as a normal desk setup and left alone.
 
 An agent that works from screenshots (computer use) sees nothing once the lid closes: macOS has no active display left. Turn on **Settings › Virtual display when lid closed** (off by default) and Decaffeinate gives it a 1280×800 virtual display instead of turning the screen off, and keeps that display from sleeping. The trade-off: the Mac never locks while the lid is closed, so whoever opens it gets an unlocked Mac. The display goes away when the lid opens and on every path that ends the stay-awake. The option is hidden if your macOS doesn't offer virtual displays.
 
